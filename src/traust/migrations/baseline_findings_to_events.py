@@ -32,6 +32,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
+from traust_contracts.v1.timestamps import TimestampError, to_rfc3339
 from traust_engine.ledger import (
     LedgerError,
     compute_event_id,
@@ -119,9 +120,20 @@ def main(argv: list[str] | None = None) -> int:
             if not when:
                 tally["no timestamp — skipped"] += 1
                 continue
+            # Through the contract, never by hand: `when` comes from three
+            # unvalidated report fields, so it can be any JSON type. The old
+            # `"T" in str(when)` test passed a bare `True` through unchanged
+            # (because "T" is in "True") and padded `False` into
+            # "FalseT00:00:00+00:00". to_rfc3339 raises on both instead.
+            try:
+                recorded_at = to_rfc3339(when)
+            except TimestampError as exc:
+                tally["unusable timestamp — skipped"] += 1
+                problems.append(f"{report.name}:{ref}: {exc}")
+                continue
             ev = {
                 "finding_ref": ref,
-                "recorded_at": when if "T" in str(when) else f"{when}T00:00:00+00:00",
+                "recorded_at": recorded_at,
                 "source": {
                     "type": stype,
                     "ref": name,

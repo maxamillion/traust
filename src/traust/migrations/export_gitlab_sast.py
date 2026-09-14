@@ -42,6 +42,8 @@ import sys
 import uuid
 from pathlib import Path
 
+from traust_contracts.v1.timestamps import TimestampError, to_rfc3339
+
 SCHEMA_VERSION = "15.2.1"
 # deterministic namespace for uuid5 vulnerability ids (random-generated
 # once, fixed forever — NOT per-run)
@@ -94,8 +96,17 @@ def export(report: dict, include_fps: bool = False) -> tuple[dict, int]:
     additional = metadata.get("additional") or {}
     version = str(additional.get("harness_version") or metadata.get("harness_version") or "0.0.0")
     semantic = version.split("-")[0]
+    # GitLab's schema specifies scan.start_time/end_time as
+    # `yyyy-mm-ddThh:mm:ss` with NO offset, so this deliberately does not
+    # emit RFC 3339. It still goes through the contract first: metadata.date
+    # is unvalidated, and concatenating it raw produced 'TrueT00:00:00' for a
+    # bool and a doubled '...+00:00T00:00:00' for an already-full timestamp.
+    # to_rfc3339 normalises or raises; the offset is then dropped for GitLab.
     date = metadata.get("date") or "1970-01-01"
-    stamp = f"{date}T00:00:00"
+    try:
+        stamp = to_rfc3339(date)[:19]
+    except TimestampError:
+        stamp = "1970-01-01T00:00:00"
 
     vulnerabilities, excluded = [], 0
     for f in report.get("findings") or []:
