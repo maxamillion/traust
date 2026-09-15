@@ -151,6 +151,7 @@ licenses table below, and rule 6 of the content guard).
 | Plugin | Used by | Version at intake | License | Evidence | Risk |
 |---|---|---|---|---|---|
 | review-walkthrough (marketplace `trailofbits`) | patch, remediate-finding — optional aid for the human-review step; renders a branch diff as a standalone HTML walkthrough | 1.2.1 (marketplace manifest, 2026-09-15) | CC-BY-SA-4.0 | [LICENSE](https://github.com/trailofbits/skills/blob/main/LICENSE) · [plugin](https://github.com/trailofbits/skills/tree/main/plugins/review-walkthrough) | **Low while used, not adapted** — invoking it creates no obligation; it reads a git range and writes its own HTML, consuming no harness artifact and writing none |
+| mutation-testing (marketplace `trailofbits`) | *adopted, not yet wired* — drives the `mewt` engine; see the AGPL and scope notes under CLI tools | 1.9.0 (marketplace manifest, 2026-09-15) | CC-BY-SA-4.0 | [LICENSE](https://github.com/trailofbits/skills/blob/main/LICENSE) · [plugin](https://github.com/trailofbits/skills/tree/main/plugins/mutation-testing) | **Low while used, not adapted** — the skill is a router over `mewt`/`muton`, so the value and the risk both sit in the engine, not the prose |
 
 **Freshness.** Plugins have no binary and no `--version`, so
 `config/external-tools.yaml` cannot describe them. The roster at
@@ -160,6 +161,18 @@ installed-behind-the-marketplace reports `stale`. Neither auto-advances a
 version — upstream can change a skill's behaviour *and* its licence terms
 between releases, so a `stale` row means re-read this table, not just
 `/plugin update`.
+
+**`mutation-testing` is adopted but has no consumer yet.** The integration
+plan proposed running it behind `patch`'s regression step, which the code does
+not permit: `patch`'s static mode cannot execute target code at all (its own
+guidance redirects build/test-verified work to `remediate-finding`), and its
+execution-verified mode delegates wholesale to the C/C++ ASAN pipeline ladder.
+`remediate-finding` is the skill that runs a repo's own build/test suite, so it
+is the plausible home — but a surviving-mutant verdict is patch *evidence*, and
+what counts as patch evidence is an open schema decision (plan item 5a). Wiring
+it first would mean emitting into a contract that does not exist yet. The row
+above exists so the dependency is watched in the meantime; `consumers` in the
+roster is deliberately empty.
 
 ## Vulnerability-data feeds & web APIs
 
