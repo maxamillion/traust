@@ -59,5 +59,38 @@ Ask which side of the line the work sits on.
   packets; the inferential half adjudicates. The diff lane is the model — a
   deterministic resolver and packet builder feed a bounded review.
 
+## Worked example: patch verification
+
+`/patch` is a clean instance of the "both — split it" case, and a useful one
+because the split also marks the limit of what the deterministic half can
+conclude.
+
+- **Deterministic half — the fact differential.** Apply the candidate diff to a
+  scratch worktree, re-run the scanner that produced the backing fact, record
+  `fact_differential: cleared | persists | not-applicable: <reason>`. This
+  *gates*: a persisting fact rejects the patch unless the reviewer articulates
+  why the scanner is wrong. It is allowed to gate precisely because it
+  concludes nothing about the fix — only about whether its own evidence still
+  fires.
+- **Inferential half — the blinded reviewer.** One reviewer subagent per diff,
+  given only `{file, line, category}` plus the raw diff bytes. It never sees
+  the finding's `description`, `recommendation`, or the patch author's
+  `rationale`, so instructions embedded in finding prose cannot reach both the
+  author and the gate. Whether the diff is a minimal, in-scope fix at the right
+  layer is a judgment, and it stays with the model.
+
+The safety rule holds in both directions here. The scanner may not declare the
+patch good; the reviewer's verdict is not final until the diff passes the
+deterministic checks that guard its shape. And the honest limit is recorded in
+the skill itself: a cleared fact says the pattern is gone, not that the fix is
+correct or minimal.
+
+What is **missing** from this split, rather than mis-assigned: a deterministic
+half that observes the target's *behaviour* before and after the patch, rather
+than its scanner output. That exists only on the `vuln-pipeline` path (build →
+reproduce → regress → re-attack). See
+[disposition-ledger.md](disposition-ledger.md) §8a for what each patch path can
+and cannot prove.
+
 When the split is unclear, the safety rule decides: if the tool's output would
 be read as a verdict, it is on the wrong side of the line.

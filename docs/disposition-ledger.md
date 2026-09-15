@@ -555,6 +555,40 @@ Because state is derived, one event stream yields several products:
   has never been empirically demonstrated — the standing priority queue
   for fuzzing and live validation).
 
+### 8a. What a *patch* has been proven to do
+
+The assurance ladder above grades a **finding** — how sure are we the
+vulnerability is real. It says nothing about a **fix**, and the two are
+graded by different machinery. State the fix side explicitly, because the
+strongest evidence available depends entirely on which input produced the
+patch.
+
+| Patch path | Strongest evidence it can carry | Ceiling |
+|---|---|---|
+| `/patch` **execution-verified mode** (`vuln-pipeline` input) | the build → reproduce → regress → re-attack ladder with executable oracles; `verified: ladder_passed` / `ladder_failed` | behavioural: the original failure is observed before and not after |
+| `/patch` **static mode** (audit/triage/vuln-scan input) | `fact_differential: cleared` — the backing scanner, re-run on a scratch worktree with the diff applied, no longer fires | **pattern-level only** |
+| `/patch` static mode, finding **not** scanner-backed | `fact_differential: not-applicable: <reason>` | none; the reviewer verdict is the only signal |
+| `/remediate-finding` | the target repo's own build/test suite, run in containment | the project's suite, which was not written for this bug |
+| `/verify-remediation` | a targeted re-audit against the patched code, same frameworks as the original audit | analysis, not execution — it never compares a baseline revision against a patched one |
+
+Three consequences worth keeping in view:
+
+- **A cleared fact is not a correct fix.** `/patch` says so itself: the pattern
+  is gone, not that the fix is correct or minimal. A diff can silence a scanner
+  by moving the sink.
+- **The executable ladder has a narrow footprint.** It needs `vuln-pipeline`
+  input, so it does not reach findings that arrived from an audit, triage, or
+  `/vuln-scan`.
+- **`verified−proven` has a fix-side twin.** The *validation gap* above measures
+  believed risk never empirically demonstrated. The same question asked of
+  remediation — believed fixes never empirically demonstrated — has no metric
+  yet. Closing that is tracked in
+  `progress-tracker/plans/tob-skills-integration-plan.md` §4.1.
+
+Nothing here is a reason to distrust a patch. It is a reason not to read
+"patched" as "proven", and to keep the two words apart in dashboards and
+reports.
+
 ## 9. A finding's worked timeline
 
 ```

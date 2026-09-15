@@ -174,6 +174,18 @@ runs the repo's own build/test suite in containment;
 patched code (single repo, or the weekly full-sweep treadmill) and its
 verdicts resolve ledger entries via `/track-findings`.
 
+**What a patch here has been proven to do depends on how it got here.**
+`/patch`'s executable ladder — build → reproduce → regress → re-attack —
+runs only in execution-verified mode, which needs `vuln-pipeline` input.
+On the static path (audit, triage or `/vuln-scan` input) the strongest
+executable evidence is the fact differential: the backing scanner, re-run
+on a scratch worktree with the diff applied, no longer fires — pattern-level,
+and only for scanner-backed findings. `/verify-remediation` is a re-audit,
+so it is analysis rather than execution. None of this makes a patch
+untrustworthy; it means "patched" and "proven" are different claims. The
+per-path ceilings are tabulated in
+[docs/disposition-ledger.md](docs/disposition-ledger.md) §8a.
+
 ---
 
 ## Stage 8 — Team Report Packaging
