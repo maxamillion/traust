@@ -1213,6 +1213,13 @@ _VERSION_CMD_BINARIES = frozenset(
         "cloc",
         "yara",
         "joern",
+        # `mewt` is a mutation engine that runs the TARGET's own test suite,
+        # so it executes arbitrary code by design -- but only under its
+        # campaign subcommands. It is safe here for the same reason `go` is:
+        # _vet_version_cmd admits only flag-shaped args or the literal
+        # "version", so `mewt --version` passes and `mewt run <path>` cannot
+        # be spelled from the manifest at all.
+        "mewt",
         # `go` is a toolchain driver, not a scanner, and is the most dangerous
         # entry here: `go run`/`go generate` execute arbitrary code. It is safe
         # ONLY because _vet_version_cmd restricts args to flag-shaped tokens or

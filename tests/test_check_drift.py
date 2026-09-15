@@ -1734,6 +1734,18 @@ def test_half_specified_upstream_is_still_refused(tmp_path, monkeypatch):
     assert "kind and ref, or neither" in err
 
 
+def test_mewt_is_allowlisted_but_only_for_version():
+    """mewt runs target test suites, so only its version probe is grantable.
+
+    Adding a roster row without the allowlist entry fails the whole load
+    closed (every external-tools row goes `unavailable`), which is how the
+    2026-09-15 mewt intake was caught.
+    """
+    assert cd._vet_version_cmd(["mewt", "--version"]) is None
+    for argv in (["mewt", "run", "."], ["mewt", "mutate", "x.go"], ["mewt", "print"]):
+        assert cd._vet_version_cmd(argv) is not None, argv
+
+
 def test_go_is_allowlisted_but_only_for_version():
     assert cd._vet_version_cmd(["go", "version"]) is None
     for argv in (["go", "run", "x"], ["go", "generate"], ["go", "build"]):

@@ -97,7 +97,31 @@ tools). Pinned versions for the scanner binaries live in
 | `aws` (CLI v2) | compliance-check `collect_cloud_inventory.py` (declared cloud inventory export) | Apache-2.0 | [LICENSE](https://github.com/aws/aws-cli/blob/v2/LICENSE.txt) — AWS *service* use is governed separately by AWS service terms |
 | `gcloud` (Google Cloud CLI) | pqc-readiness `build_xcrypto_tracker.py --push-sheet` only — mints a short-lived bearer from the operator's own login; never required for the CSV/md outputs | Proprietary (Google Cloud SDK ToS; freely downloadable, not OSS) | [terms](https://cloud.google.com/terms/service-terms) — invoked, never redistributed |
 | `gws` (Google Workspace CLI) | reassign-findings-owners (document-share permissions, ownership tracker) | Apache-2.0 | [LICENSE](https://github.com/googleworkspace/cli/blob/main/LICENSE) — README notes it is "not an officially supported Google product" |
+| `mewt` | mutation-testing (opt-in; see **Agent skills (runtime plugins)**) — runs a target's own test suite against generated mutants | **AGPL-3.0** | [LICENSE](https://github.com/trailofbits/mewt/blob/main/LICENSE) · [Cargo.toml](https://github.com/trailofbits/mewt/blob/main/Cargo.toml) — subprocess CLI, never linked or redistributed; see the AGPL note below |
 | `wasm-tools` / `wasmtime` / `wasmedge` | validate-findings WASM adapter | Apache-2.0 WITH LLVM-exception (OR MIT) / same / Apache-2.0 | [wasm-tools](https://github.com/bytecodealliance/wasm-tools/blob/main/LICENSE-Apache-2.0_WITH_LLVM-exception) · [wasmtime](https://github.com/bytecodealliance/wasmtime/blob/main/LICENSE) · [wasmedge](https://github.com/WasmEdge/WasmEdge/blob/master/LICENSE) |
+
+**AGPL-3.0 and `mewt` (§13).** The usage taxonomy at the top of this document
+settles the ordinary case: a subprocess CLI invoking an unmodified binary
+creates no linking and no derivation, so even a copyleft tool imposes no
+obligation unless a distribution bundles it — and the harness does not bundle
+`mewt`. The clause worth recording is **AGPL §13**, which attaches a
+source-offer obligation when software is *offered to users over a network*.
+`mewt` runs locally and in CI here, so §13 does not attach today; a deployment
+that exposed a mutation-testing lane as a hosted service would have to revisit
+it before doing so.
+
+**Scope.** `mewt` supports C++, DAML, Go, JavaScript/TypeScript, Rust,
+Solidity and Move (README, v4.0.0). It does **not** support Python, which is a
+large slice of this portfolio, so mutation results are never portfolio-wide
+assurance. This deployment scopes it Go-first via the `mutation-testing`
+safe-exec profile; other supported languages are a deliberate later widening,
+not an assumed capability.
+
+**Opt-in, not shipped.** The `mewt` roster row lives in the *deployment's*
+`$TRAUST_CONFIG_HOME/external-tools.yaml`, not the harness default. That
+manifest doubles as the job-image install target, so adding an optional
+AGPL engine to the shipped roster would push it into every adopter's image.
+Adopters who install the plugin add their own row.
 
 Cluster-provisioning tools (managed-cloud CLIs, installers, deployment
 helpers) are **not** harness dependencies. Live validation needs a reachable
