@@ -50,7 +50,7 @@ REQUIRED_FILES="corpus-config.yaml safe-exec-profiles.yaml"
 # is NOT copied because its template is instructions, not a key.
 OPTIONAL_FILES="product-definitions-map.yaml budget-policy.yaml rule-pack-allowlist.yaml hardening-risk-weights.json rpm-distgit-watch.yaml internal-vocabulary.yaml locations.yaml remediation.yaml campaign.yaml export.yaml"
 # Files whose template is a real, usable starting point (copied as-is).
-COPYABLE="corpus-config.yaml safe-exec-profiles.yaml product-definitions-map.yaml budget-policy.yaml rule-pack-allowlist.yaml hardening-risk-weights.json rpm-distgit-watch.yaml internal-vocabulary.yaml remediation.yaml campaign.yaml locations.yaml remediation.yaml campaign.yaml export.yaml"
+COPYABLE="agent-plugins.yaml corpus-config.yaml safe-exec-profiles.yaml product-definitions-map.yaml budget-policy.yaml rule-pack-allowlist.yaml hardening-risk-weights.json rpm-distgit-watch.yaml internal-vocabulary.yaml remediation.yaml campaign.yaml locations.yaml remediation.yaml campaign.yaml export.yaml"
 # Shipped as-is with the harness and ALSO copied into TRAUST_CONFIG_HOME, so a
 # deployment is complete in one directory even where only traust-engine is
 # installed. These are the MANIFEST-required shipped defaults (model router +

@@ -37,6 +37,7 @@ import importlib.util
 import json
 import os
 import subprocess
+import tempfile
 import sys
 from pathlib import Path
 
@@ -3641,6 +3642,158 @@ def check_language_cache_freshness(ws: Path) -> list[dict]:
     ]
 
 
+# --------------------------------------------------------------------------
+# agent plugins — installed Claude Code plugins vs their marketplace entry
+# --------------------------------------------------------------------------
+# config/external-tools.yaml describes a BINARY: a `version_cmd` to run and a
+# GitHub release to compare against. An agent plugin has neither, so adopting
+# one leaves a dependency nothing watches — the shape of the sigstore
+# retroactive intake. This row closes that, modelled on check_adr_registry:
+# a recorded local state compared against the upstream source of truth, with
+# no auto-advance.
+#
+# Roster lives in $TRAUST_CONFIG_HOME/agent-plugins.yaml so the deployment
+# decides which plugins it depends on; absent file = nothing watched, which
+# is the default for an adopter using no plugins.
+AGENT_PLUGINS_MANIFEST = optional_config_path("agent-plugins.yaml")
+
+_PLUGIN_STATE = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
+
+
+def _installed_plugin(state: dict, name: str, marketplace: str) -> dict | None:
+    """The newest install record for `name@marketplace`, or None."""
+    records = (state.get("plugins") or {}).get(f"{name}@{marketplace}") or []
+    return max(records, key=lambda r: r.get("lastUpdated") or "", default=None)
+
+
+def check_agent_plugins(ws: Path) -> list[dict]:
+    """Installed agent plugins vs the version their marketplace publishes.
+
+    Reports only; advancing a plugin is a deliberate human action, per the
+    standing constraint that no check may auto-advance a pin.
+    """
+    if AGENT_PLUGINS_MANIFEST is None or not AGENT_PLUGINS_MANIFEST.is_file():
+        return []
+    if yaml is None:
+        return [item("agent-plugins", "unavailable", "PyYAML missing")]
+    roster = yaml.safe_load(AGENT_PLUGINS_MANIFEST.read_text(encoding="utf-8")) or {}
+    entries = roster.get("plugins") or []
+    if not entries:
+        return []
+
+    # Roster validation first: a malformed repo URL is a config error and must
+    # be reported even on a machine with no plugins installed, where the state
+    # read below legitimately fails.
+    out: list[dict] = []
+    checkable = []
+    for e in entries:
+        url = str(e.get("repo") or "")
+        if not url.startswith("https://"):
+            out.append(
+                item(
+                    f"agent-plugins:{e.get('name')}",
+                    "unavailable",
+                    f"non-https plugin repo refused: {url}",
+                )
+            )
+            continue
+        checkable.append(e)
+    if not checkable:
+        return out
+
+    try:
+        state = json.loads(_PLUGIN_STATE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return out + [
+            item(
+                "agent-plugins",
+                "unavailable",
+                f"cannot read {_PLUGIN_STATE} — plugins are a per-workstation "
+                "install, so this row is silent on a headless runner",
+            )
+        ]
+
+    for e in checkable:
+        name = e.get("name")
+        marketplace = e.get("marketplace")
+        url = str(e.get("repo") or "")
+        row = f"agent-plugins:{name}"
+
+        installed = _installed_plugin(state, name, marketplace)
+        if installed is None:
+            out.append(
+                item(
+                    row,
+                    "pending",
+                    f"declared in agent-plugins.yaml but not installed",
+                    f"/plugin marketplace add {marketplace} && /plugin install {name}",
+                )
+            )
+            continue
+
+        have = installed.get("version")
+        sha = (installed.get("gitCommitSha") or "")[:12]
+        want, err = _marketplace_version(url, name)
+        if err:
+            out.append(item(row, "unavailable", err))
+            continue
+
+        if want and have and want != have:
+            out.append(
+                item(
+                    row,
+                    "stale",
+                    f"installed {have} (sha {sha or 'unknown'}) but the marketplace "
+                    f"publishes {want} — upstream may have changed the skill's "
+                    f"behaviour or its licence terms",
+                    f"/plugin update {name}, then re-check its row in "
+                    f"docs/external-dependencies.md",
+                )
+            )
+        else:
+            out.append(item(row, "fresh", f"{have} matches the marketplace (sha {sha or 'n/a'})"))
+    return out
+
+
+def _marketplace_version(url: str, name: str) -> tuple[str | None, str | None]:
+    """(version, error) for `name` in the marketplace manifest at `url`.
+
+    Reads the manifest from a shallow clone rather than a raw-content URL so
+    the row works for any git host, and so the https gate above is the only
+    network policy decision.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            proc = subprocess.run(
+                ["git", "clone", "--depth", "1", "--quiet", "--", url, tmp + "/m"],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                env={**os.environ, "GIT_ALLOW_PROTOCOL": "https", "GIT_TERMINAL_PROMPT": "0"},
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            return None, f"cannot reach {url} ({type(exc).__name__})"
+        if proc.returncode != 0:
+            return None, f"cannot clone {url}"
+        manifest = Path(tmp) / "m" / ".claude-plugin" / "marketplace.json"
+        if not manifest.is_file():
+            return None, f"{url} has no .claude-plugin/marketplace.json"
+        try:
+            doc = json.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None, f"unreadable marketplace.json at {url}"
+        return _plugin_version_from_manifest(doc, name, url)
+
+
+def _plugin_version_from_manifest(doc: dict, name: str, url: str) -> tuple[str | None, str | None]:
+    """The version `name` is published at in a marketplace manifest document."""
+    for plugin in doc.get("plugins") or []:
+        if plugin.get("name") == name:
+            return plugin.get("version"), None
+    return None, f"{name} is not listed in {url}'s marketplace.json"
+
+
+
 CHECKS = (
     check_findings_db,
     check_ledger_completeness,
@@ -3655,6 +3808,7 @@ CHECKS = (
     check_yara_rules_pin,
     check_argus_rules_pin,
     check_external_tools,
+    check_agent_plugins,
     check_feed_sources,
     check_grype_db,
     check_pqc_facts_provenance,
