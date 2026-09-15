@@ -940,22 +940,25 @@ def _grouped_form(repo: Path, module: str) -> str | None:
 _CLI_SYNTAX_EXEMPT = {"docs/cli-reference.md"}
 
 
-def cli_syntax_failures(repo: Path = REPO) -> list[str]:
-    failures = []
+def _cli_scanned_docs(repo: Path) -> list[Path]:
+    """Files whose CLI invocations are held to the grouped syntax."""
     docs = list(_count_docs(repo))
     docs += sorted(p for p in (repo / "config").iterdir() if p.is_file())
     docs += sorted((repo / "harnessing").glob("*/SKILL.md"))
     docs += sorted((repo / "harnessing").glob("*/*/SKILL.md"))
     docs += sorted((repo / ".claude" / "commands").glob("*.md"))
-    for doc in docs:
-        if not doc.exists() or doc.is_symlink():
+    return [d for d in docs if d.exists() and not d.is_symlink()]
+
+
+def cli_syntax_failures(repo: Path = REPO) -> list[str]:
+    failures = []
+    for doc in _cli_scanned_docs(repo):
+        rel = doc.relative_to(repo)
+        if rel.as_posix() in _CLI_SYNTAX_EXEMPT:
             continue
         try:
             text = doc.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
-            continue
-        rel = doc.relative_to(repo)
-        if rel.as_posix() in _CLI_SYNTAX_EXEMPT:
             continue
         for m in _DOT_INVOKE_RX.finditer(text):
             module = m.group(1)
@@ -1012,6 +1015,46 @@ def cli_reference_failures(repo: Path = REPO) -> list[str]:
     return failures
 
 
+# A grouped invocation naming an operation the group does not have. This is the
+# other half of the syntax problem: an earlier migration rewrote module paths
+# used as nouns in prose into invocations, producing text like
+# "python3 -m traust.cli corpus resolves triage companions" (`resolves` is not an
+# op) and "sweep rule-expressibility routing" (not an op). Those read as commands
+# and are unrunnable, and the dot-separated check cannot see them.
+#
+# Only flagged when the GROUP is real and the next token is not one of its ops,
+# so ordinary prose after a complete command is not misread.
+_GROUPED_INVOKE_RX = re.compile(r"python3 -m traust\.cli ([a-z][a-z0-9-]*) ([a-z][a-z0-9-]*)")
+
+
+def cli_op_failures(repo: Path = REPO) -> list[str]:
+    try:
+        from traust.cli.groups import GROUPS
+    except ImportError as exc:  # pragma: no cover
+        return [f"cannot import GROUPS ({exc})"]
+
+    failures = []
+    for doc in _cli_scanned_docs(repo):
+        rel = doc.relative_to(repo)
+        if rel.as_posix() in _CLI_SYNTAX_EXEMPT:
+            continue
+        try:
+            text = doc.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for m in _GROUPED_INVOKE_RX.finditer(text):
+            group, op = m.group(1), m.group(2)
+            if group not in GROUPS or op in GROUPS[group]:
+                continue
+            failures.append(
+                f"{rel}: `python3 -m traust.cli {group} {op}` — `{op}` is not an "
+                f"operation of group `{group}` (has: "
+                f"{', '.join(sorted(GROUPS[group]))}). If the sentence means the "
+                f"module rather than a command, name the module instead."
+            )
+    return failures
+
+
 CHECKS = [
     ("unresolved conflict markers", conflict_marker_failures),
     ("generated skills reference (docs/skills.md matches the tree)", skills_reference_failures),
@@ -1033,6 +1076,7 @@ CHECKS = [
     ("phantom skills (doc rows naming skills not in the tree)", phantom_skill_failures),
     ("CLI invocation syntax (grouped `<group> <op>`, not dot-separated)", cli_syntax_failures),
     ("CLI reference drift (docs/cli-reference.md vs GROUPS registry)", cli_reference_failures),
+    ("CLI operation names (grouped invocations name a real op)", cli_op_failures),
 ]
 
 

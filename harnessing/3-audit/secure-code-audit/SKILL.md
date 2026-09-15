@@ -1354,7 +1354,7 @@ Include the Kubernetes frameworks only when the repo ships manifests, charts, or
 - **Default checkout** (bare repo URL, no branch/tag requested): `ref` = the default branch's name as checked out (`git rev-parse --abbrev-ref HEAD`, e.g. `main`), `ref_kind` = `"default"`.
 - **Bare commit SHA input** (`commit:<sha>`, detached — no branch/tag name known): omit both fields; `metadata.commit` already pins the state. Do not guess a branch name.
 
-These fields are how python3 -m traust.cli corpus distinguishes branch re-audits from HEAD audits for new reports; the legacy `__release-X.Y` report-slug suffix remains a fallback for old reports only — keep naming reports per the Deduplication section, but never rely on the slug alone to carry the ref.
+These fields are how `traust_engine.corpus.resolver` distinguishes branch re-audits from HEAD audits for new reports; the legacy `__release-X.Y` report-slug suffix remains a fallback for old reports only — keep naming reports per the Deduplication section, but never rely on the slug alone to carry the ref.
 
 **`asvs_references`** — populate on findings in application-security categories (`injection`, `authentication`, `authorization`, `input-validation`, `cross-site-scripting`, `ssrf`, `cryptography`); ASVS is the primary framework and unreferenced findings weaken traceability.
 

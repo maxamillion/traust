@@ -1354,7 +1354,7 @@ Order all findings by:
 `<repo>-threat-model.md` siblings), and the file is written **next to
 the input report** — the resolved findings directory the audit report
 was read from, not the session's working directory.
-python3 -m traust.cli corpus resolves triage companions as exact siblings of
+`traust_engine.corpus.resolver` resolves triage companions as exact siblings of
 the report; a CWD-written copy is invisible to corpus resolution, the
 census, and every dashboard (docs-verification 2026-07-31, wiring
 F10). A bare `TRIAGE.json` is equally invisible (legacy bare names are

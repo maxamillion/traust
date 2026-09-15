@@ -240,7 +240,10 @@ state. The skill only auto-records what needs zero interpretation.
    ("SG_CORE-abcdef0-001 is a false positive: the value is validated in
    the CRD webhook before this path").
 2. **Verified identity**: the author's forge username maps to an employee
-   via `python python3 -m traust.cli admin validate-employee`.
+   by the ledger identity layer: `python3 -m traust.cli admin countersign` requires a
+   cryptographically verified human OIDC token and cross-checks the holder
+   against the deployment's employee directory (`LEDGER_DIRECTORY_COMMAND`),
+   refusing to record otherwise.
 3. **Authority**: the author is one of the findings package's assigned
    owners (owners.csv / assign-findings-owners output) or a project
    Maintainer+ (forge members API). An **escalation contact**

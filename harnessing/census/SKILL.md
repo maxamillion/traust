@@ -64,7 +64,7 @@ python3 harnessing/census/scripts/build_census.py \
 
 What the script does:
 
-1. Resolves the population via python3 -m traust.cli corpus against
+1. Resolves the population via `python3 -m traust.cli corpus resolve` against
    `$TRAUST_CONFIG_HOME/corpus-config.yaml`: depth-tolerant walk of every registered
    tree, symlink aliases mapped to canonical reports (never counted),
    branch-ref identity (declared `metadata.ref` preferred, legacy

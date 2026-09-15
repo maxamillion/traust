@@ -299,7 +299,7 @@ many turns, and an early read will be evicted before it's used.
 **Findings-tree placement (wiring contract, 2026-07-31).** The checkout
 copy alone is invisible to every downstream consumer — `/secure-code-audit`
 (coverage diff), `/vuln-scan`, `/triage`, `/threat-register`, and
-python3 -m traust.cli corpus all resolve threat models from the campaign findings
+`traust_engine.corpus.resolver` all resolve threat models from the campaign findings
 tree, and target checkouts are disposable. Whenever the target has a
 findings directory (`analysis-results/findings/<product>/<repo>/`), copy
 the emitted `<model-file>` there in the same step that writes it. If no
