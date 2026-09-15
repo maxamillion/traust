@@ -43,6 +43,31 @@ docs/external-dependencies.md, "Security frameworks & content licenses").
    ("TSC CC6.1"), never criteria text. Detectable markers: embedded
    COSO principle statements and points-of-focus boilerplate.
 
+6. ShareAlike provenance markers (2026-09-15). BY-SA section 3(b)
+   requires any Adapted Material that is *Shared* to carry a CC license
+   with the same License Elements — which Apache-2.0 is not. The harness
+   therefore treats wholesale adaptation of a BY-SA work differently from
+   the delimited, attributed framework excerpts it already relies on:
+   docs/external-dependencies.md rates OWASP ASVS and the Kubernetes
+   Top 10 (both CC-BY-SA-4.0) **Low** precisely because their excerpts stay
+   delimited and attributed, keeping SA scoped. That posture is recorded
+   there, not decided here.
+
+   What this rule enforces is narrower and mechanical: a BY-SA *provenance
+   marker* ("CC BY-SA", "Attribution-ShareAlike", "ShareAlike", the licence
+   URL) appearing outside the files that discuss licensing means BY-SA
+   material arrived with its license notice attached — i.e. someone pasted
+   a licensed work in rather than excerpting under the recorded posture.
+   The marker is the signal; the judgment lives in the doc.
+
+   The case that prompted it: agent-skill collections published under BY-SA
+   (trailofbits/skills). *Using* such a skill at runtime — installing it as
+   a plugin, invoking its tools — creates no obligation at all. Copying or
+   adapting its SKILL.md prose into this tree does, because that text is
+   then distributed under our license. Clean-room reimplementation from the
+   *ideas* stays permitted: BY-SA covers expression, not concepts. Cite the
+   upstream as prior art and keep the wording original.
+
 The fingerprint phrases recorded here are short strings (not copyrightable
 expression) kept solely to detect re-importation. Extend the lists when a
 new protected content class enters the harness.
@@ -68,11 +93,16 @@ from traust.paths import HARNESS_ROOT
 
 REPO = HARNESS_ROOT
 
-# Files that legitimately discuss the NonCommercial licenses by name.
+# Files that legitimately discuss the restricted licenses by name.
 ALLOWLIST = {
     "docs/external-dependencies.md",
     "CHANGELOG.md",
     "src/traust/cli/check_content_licenses.py",  # this file carries the patterns
+    # The skill whose whole subject is these rules: its violation-class table
+    # has to name "NonCommercial" and "ShareAlike" to explain them. It escaped
+    # the allowlist until 2026-09-15 only because its wording ("CC-NC-licensed")
+    # happened to dodge both patterns.
+    "harnessing/check-licensing/SKILL.md",
 }
 
 # Trees/files scanned. tests/ is excluded (fixtures need the patterns);
@@ -91,6 +121,21 @@ SCAN_GLOBS = (
 
 # --- Rule 1a: NonCommercial license markers -------------------------------
 NC_MARKER_RE = re.compile(r"BY-NC|Non-?Commercial", re.IGNORECASE)
+
+# --- Rule 6: ShareAlike license markers -----------------------------------
+# Apache-2.0 cannot serve as the Adapter's License for BY-SA material
+# (BY-SA 3(b)), so BY-SA prose must not be copied or adapted into this tree.
+# "CC BY-SA", "BY-SA 4.0", "Attribution-ShareAlike", bare "ShareAlike", and
+# the licence URL are all matched. `BY-NC-SA` is left to rule 1a, which
+# reports it as NonCommercial — the stronger blocker of the two.
+SA_MARKER_RE = re.compile(
+    r"Attribution-ShareAlike"
+    r"|CC[ -]BY[ -]SA"
+    r"|\bBY-SA\b"
+    r"|\bShareAlike\b"
+    r"|creativecommons\.org/licenses/by-sa",
+    re.IGNORECASE,
+)
 
 # --- Rule 1b: fingerprints of the removed Wiz-derived PEACH adaptation ----
 # Distinctive substrings from the pre-v0.54.2 tables (git history:
@@ -229,6 +274,15 @@ def content_license_failures(repo: Path = REPO) -> list[str]:
                     f"'{m.group(0)}' — CC-NC-licensed content re-imported? "
                     f"(PEACH rule 1a; see docs/external-dependencies.md)"
                 )
+            elif (m := SA_MARKER_RE.search(line)) is not None:
+                failures.append(
+                    f"{rel}:{n}: ShareAlike license marker '{m.group(0)}' — "
+                    f"BY-SA content adapted into this Apache-2.0 tree? BY-SA "
+                    f"3(b) requires a CC ShareAlike Adapter's License, which "
+                    f"Apache-2.0 is not. Use the upstream at runtime, or "
+                    f"reimplement from the ideas in original wording "
+                    f"(rule 6; see docs/external-dependencies.md)"
+                )
             for phrase in PEACH_FINGERPRINTS:
                 if phrase in line:
                     failures.append(
@@ -267,7 +321,7 @@ def content_license_failures(repo: Path = REPO) -> list[str]:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
-        description="Guard against re-importing NC-licensed framework text."
+        description="Guard against re-importing NC- or SA-licensed framework text."
     )
     ap.add_argument("--root", default=str(REPO), help="Repo root to check (default: this harness).")
     args = ap.parse_args(argv)
@@ -277,7 +331,7 @@ def main(argv=None) -> int:
     print(f"Content-license guard for {repo}")
     if not failures:
         print(
-            "✓ no NC-licensed content markers, PEACH-adaptation "
+            "✓ no NC- or SA-licensed content markers, PEACH-adaptation "
             "fingerprints, CIS benchmark text, PCI DSS standard text, "
             "or AICPA TSC criteria text found"
         )

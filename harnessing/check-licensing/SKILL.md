@@ -45,7 +45,8 @@ violation classes:
 
 | Class | Meaning |
 |---|---|
-| Restrictive content-license marker outside the allowlisted licensing docs | CC-NC-licensed content was re-imported somewhere in the tree |
+| NonCommercial marker outside the allowlisted licensing docs | CC-NC-licensed content was re-imported somewhere in the tree (rule 1a) |
+| ShareAlike marker outside the allowlisted licensing docs | a CC-BY-SA work arrived with its licence notice attached — i.e. it was pasted in rather than excerpted under the recorded posture (rule 6). BY-SA 3(b) wants a CC ShareAlike Adapter's License; Apache-2.0 is not one. Using a BY-SA skill at runtime is free of obligation; adapting its prose is not. Reimplementing from the ideas in original wording is permitted — BY-SA covers expression, not concepts — so cite the upstream as prior art |
 | PEACH-adaptation fingerprint | text from the removed pre-v0.54.2 Wiz-derived tables (or its upstream source) was pasted back in |
 | CIS recommendation-text signature | CIS benchmark control text was copied in — the harness cites bare section IDs only |
 | Dependency without an intake row | a `pyproject.toml` package (core or any optional group, inline or block form) has no row in `docs/external-dependencies.md` — Job 2 was skipped; run it |

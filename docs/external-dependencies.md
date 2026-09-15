@@ -158,6 +158,13 @@ files — the prompt files are distributed content, so content licenses bind;
 **(c)** embedding in a commercial product — same as (b) plus NonCommercial
 clauses activate.
 
+Two content clauses bite in category (b) for different reasons, and the
+content guard detects both: **NonCommercial** (rule 1) blocks
+commercialization, **ShareAlike** (rule 6) blocks relicensing under
+Apache-2.0. ShareAlike is survivable when excerpts stay delimited and
+attributed — that is why the OWASP rows below are Low — and is a blocker
+when a whole BY-SA work is adapted.
+
 | Framework | Used by | License / Terms | Evidence | Risk |
 |---|---|---|---|---|
 | OWASP ASVS v5.0 | secure-code-audit, secure-rpm-audit, vuln-scan | CC-BY-SA-4.0 | [LICENSE](https://raw.githubusercontent.com/OWASP/ASVS/master/LICENSE.md) | **Low** — attribution + ShareAlike on *adapted excerpts only*; keep them delimited and attributed so SA stays scoped |
@@ -172,6 +179,7 @@ clauses activate.
 | SLSA v1.2 | secure-code-audit, secure-rpm-audit, secure-container-audit | Community Specification License 1.0 | [LICENSE](https://raw.githubusercontent.com/slsa-framework/slsa/main/LICENSE.md) | **Low** — attribution on derivatives; defensive patent-termination clause |
 | OpenSSF Scorecard | secure-code-audit, secure-rpm-audit | Apache-2.0 (code) / CDLA-Permissive-2.0 (data) | [repo](https://github.com/ossf/scorecard) | **None** |
 | PEACH tenant-isolation framework | secure-code-audit, security-audit-phased (methodology reference) | Upstream content is NonCommercial and self-contradictory (repo `LICENSE.md` CC-BY-NC-**ND**-4.0; README badge and site CC-BY-NC-**SA**-4.0). The harness reproduces none of it: its PEACH sections are original text citing only the methodology, parameter names, and IDs | [LICENSE.md](https://github.com/wiz-sec-public/peach-framework/blob/main/LICENSE.md) · [README](https://github.com/wiz-sec-public/peach-framework/blob/main/README.md) | **Low** while the text stays original — enforced by the content guard |
+| Agent-skill collections under CC-BY-SA (e.g. [trailofbits/skills](https://github.com/trailofbits/skills)) | *none adapted* — candidates for runtime use only (plugin install / tool invocation) | CC-BY-SA-4.0 | [LICENSE](https://github.com/trailofbits/skills/blob/main/LICENSE) | **Low while used, not adapted.** Running a BY-SA skill creates no obligation; copying or adapting its prose into a SKILL.md would, since BY-SA 3(b) demands a CC ShareAlike Adapter's License and Apache-2.0 is not one. Reimplementation from the ideas in original wording is permitted (BY-SA covers expression, not concepts) — cite the upstream as prior art. Provenance markers outside the licensing docs are enforced by the content guard (rule 6) |
 | SEI CERT C/C++ Coding Standards | secure-rpm-audit, secure-code-audit (language-conditional lens) | CMU copyright: verbatim whole reproduction + internal derivatives free; other external/commercial use needs written permission | [terms in standard PDF](https://resources.sei.cmu.edu/downloads/secure-coding/assets/sei-cert-c-coding-standard-2016-v01.pdf) | **Medium** — rule IDs + titles + own paraphrase are fine; verbatim rule bodies/examples need permission |
 | SEI CERT Oracle Coding Standard for Java | secure-code-audit (language-conditional lens; the Java rule pack cites rule IDs in `metadata.cert` — patterns and text original to the pack) | CMU copyright, same terms | [published standard](https://cmu-sei.github.io/secure-coding-standards/sei-cert-oracle-coding-standard-for-java/) | **Medium** — rule IDs + titles + own paraphrase only; never import compliant/noncompliant example code |
 | Fedora Packaging Guidelines | secure-rpm-audit | CC-BY-SA-4.0 | [Fedora content license](https://communityblog.fedoraproject.org/fedoras-default-license-for-content-is-now-cc-by-sa-4-0/) | **Low** |

@@ -69,6 +69,66 @@ class TestContentLicenseGuard(unittest.TestCase):
             self.assertEqual(len(failures), 1)
             self.assertIn("rule 1a", failures[0])
 
+    # --- rule 6: ShareAlike provenance markers ----------------------------
+    # Prompted by agent-skill collections published under CC-BY-SA
+    # (trailofbits/skills). Using one at runtime carries no obligation;
+    # pasting its prose into a SKILL.md does, because BY-SA 3(b) wants a CC
+    # ShareAlike Adapter's License and Apache-2.0 is not one.
+
+    def test_detects_sharealike_license_notice(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = _mini_repo(
+                Path(d),
+                "This work is licensed under a Creative Commons "
+                "Attribution-ShareAlike 4.0 International License.\n",
+            )
+            failures = G.content_license_failures(repo)
+            self.assertEqual(len(failures), 1)
+            self.assertIn("ShareAlike license marker", failures[0])
+            self.assertIn("harnessing/some-skill/SKILL.md:1", failures[0])
+
+    def test_detects_short_by_sa_attribution(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = _mini_repo(Path(d), "Adapted from trailofbits/skills (CC BY-SA 4.0).\n")
+            failures = G.content_license_failures(repo)
+            self.assertEqual(len(failures), 1)
+            self.assertIn("rule 6", failures[0])
+
+    def test_detects_bare_sharealike_word(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = _mini_repo(Path(d), "Portions carry a ShareAlike obligation.\n")
+            failures = G.content_license_failures(repo)
+            self.assertEqual(len(failures), 1)
+            self.assertIn("rule 6", failures[0])
+
+    def test_detects_by_sa_licence_url(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = _mini_repo(
+                Path(d), "See https://creativecommons.org/licenses/by-sa/4.0/ for terms.\n"
+            )
+            failures = G.content_license_failures(repo)
+            self.assertEqual(len(failures), 1)
+            self.assertIn("rule 6", failures[0])
+
+    def test_by_nc_sa_is_reported_as_noncommercial_not_sharealike(self):
+        """NonCommercial is the stronger blocker, so rule 1a owns BY-NC-SA."""
+        with tempfile.TemporaryDirectory() as d:
+            repo = _mini_repo(Path(d), "Upstream is BY-NC-SA licensed.\n")
+            failures = G.content_license_failures(repo)
+            self.assertEqual(len(failures), 1)
+            self.assertIn("NonCommercial", failures[0])
+            self.assertNotIn("ShareAlike license marker", failures[0])
+
+    def test_sharealike_prose_without_a_marker_passes(self):
+        """"share alike" as ordinary words, and an unrelated licence name."""
+        with tempfile.TemporaryDirectory() as d:
+            repo = _mini_repo(
+                Path(d),
+                "Findings share alike characteristics across repos.\n"
+                "The shared library is Apache-2.0 licensed.\n",
+            )
+            self.assertEqual(G.content_license_failures(repo), [])
+
     def test_detects_peach_adaptation_fingerprint(self):
         with tempfile.TemporaryDirectory() as d:
             repo = _mini_repo(Path(d), "| Arbitrary code execution environment | ... |\n")
