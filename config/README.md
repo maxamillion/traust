@@ -6,9 +6,24 @@ The harness reads two kinds of configuration and keeps them apart on purpose.
 
 | File | Why it is safe to publish |
 |---|---|
-| `external-tools.yaml` | Pinned versions of the open-source scanner binaries the harness runs |
+| `external-tools.yaml` | Pinned versions of the open-source scanner binaries the harness runs. Optional per-deployment engines are deliberately **absent** — the file's own header lists them and says where each is watched instead |
 | `feeds.yaml` | Public vulnerability-feed endpoints (OSV, NVD, vendor CSAF/VEX) and their fetch policy |
-| `model-registry.yaml` | Model tier classes and routing roles; no estate data. `install_traust` also copies it into `TRAUST_CONFIG_HOME`, so a deployment is complete in one directory even where only traust-engine is installed; the copy there wins (`--doctor` warns when it differs from the shipped one, `--force` refreshes it) |
+| `model-registry.yaml` | Model tier classes and routing roles; no estate data |
+
+All three are *shipped defaults that are also seeded*: `install_traust` copies
+them into `TRAUST_CONFIG_HOME` (`SHIPPED_COPY`), so a deployment is complete in
+one directory even where only traust-engine is installed. The copy there wins;
+`--doctor` warns when it differs from the shipped one, and `--force` refreshes
+it. Two consequences worth knowing:
+
+- **A deployment's edits do not propagate back here.** Adding a tool row, a
+  feed, or a tier class to a deployment's copy is that deployment's decision.
+  Putting it in this directory instead makes it every adopter's default — and
+  for `external-tools.yaml`, a row is also a job-image install instruction.
+- **The `--doctor` divergence warning is a question, not a defect.** It cannot
+  tell an intentional override from a stale copy, so the reason for an
+  intentional one belongs in the deployment's file or in the shipped file's
+  header.
 
 ## Deployment configuration (NOT in this repository)
 
