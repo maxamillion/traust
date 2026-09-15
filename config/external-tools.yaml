@@ -18,6 +18,15 @@
 # `checkov-pin` drift row) and pqc-scan (commit-pinned in
 # harnessing/3-audit/pqc-readiness/scripts/pqc_facts.py, watched by `pqc-facts-stamps`).
 #
+# Also deliberately absent: mewt, the AGPL mutation engine behind the
+# mutation-testing plugin. A row HERE is a job-image install instruction (see
+# the orchestrator consumer above), and install_traust seeds this file into
+# every new TRAUST_CONFIG_HOME, so a row would install an optional engine for
+# adopters who never chose it and leave a permanent `pending` drift row in
+# their reports. Opting in is a per-deployment decision: add the row to
+# $TRAUST_CONFIG_HOME/external-tools.yaml, not here. Licence posture, the
+# AGPL 13 caveat and the language scope live in docs/external-dependencies.md.
+#
 # `expected` is the job-image install target and workstation floor —
 # advancing it is a deliberate, reviewed config change (drift-watch
 # constraint: no check may auto-advance a pin). Seeded 2026-07-29 from
