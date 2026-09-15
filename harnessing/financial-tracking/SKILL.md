@@ -127,7 +127,7 @@ Do not imply spend is being controlled. As of 2026-08-06:
 
 - `$TRAUST_CONFIG_HOME/budget-policy.yaml` runs `enforcement: observe` — every weekly
   tranche computes a budget verdict, records it, and **withholds
-  nothing** (python3 -m traust.cli.budget_shadow).
+  nothing** (traust.cli.budget_shadow).
 - The only lane the router can ever drop is a full audit, and only when
   enforcement is `advisory`/`enforced`.
 - `--monthly-budget` on the router is the sole live gating knob.

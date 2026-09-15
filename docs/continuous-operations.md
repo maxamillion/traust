@@ -571,7 +571,7 @@ The safety property is structural, not a convention: `read_policy_budget()`
 (the drop path's reader) reports `observe` as **no ceiling**, so `apply_budget()`
 physically cannot see one. The ceiling is visible only through
 `read_policy_shadow_ceiling()`, whose sole caller is
-python3 -m traust.cli.budget_shadow — a module that returns a
+traust.cli.budget_shadow — a module that returns a
 *report* and has no ability to filter a work list.
 
 Each tranche manifest gains a `budget_shadow` block: month-to-date lane spend,

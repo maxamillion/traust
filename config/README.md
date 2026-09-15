@@ -73,6 +73,6 @@ its own; its orchestrator sets `TRAUST_CONFIG_HOME` to that checkout.
 
 ### Hygiene gate
 
-`python3 -m traust.cli.check_docs_consistency` fails when this
+`python3 -m traust.cli check docs-consistency` fails when this
 directory contains anything other than the three shipped files, the templates,
 and this README — or when any file here carries estate-specific markers.

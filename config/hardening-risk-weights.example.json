@@ -1,5 +1,5 @@
 {
-  "$comment": "Category-aware hardening risk weights (lambda). Consumed by python3 -m traust.cli.emit_triage_ledger_events, which resolves and RECORDS the weight into each hardening ledger event at emission time \u2014 replays never re-read this file, so editing it affects only future emissions. Owner-tunable; bump `version` on any change. Rationale: docs/disposition-ledger.md section 7a. Tenancy-load-bearing categories weigh at/near 1.0 on multi-tenant/cloud-hosted products; single-tenant products dampen every weight by `single_tenant_dampening`.",
+  "$comment": "Category-aware hardening risk weights (lambda). Consumed by python3 -m traust.cli ledger emit-triage, which resolves and RECORDS the weight into each hardening ledger event at emission time \u2014 replays never re-read this file, so editing it affects only future emissions. Owner-tunable; bump `version` on any change. Rationale: docs/disposition-ledger.md section 7a. Tenancy-load-bearing categories weigh at/near 1.0 on multi-tenant/cloud-hosted products; single-tenant products dampen every weight by `single_tenant_dampening`.",
   "version": "1",
   "updated": "2026-07-11",
   "default": 0.3,

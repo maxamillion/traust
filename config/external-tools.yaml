@@ -4,7 +4,7 @@
 # docs/requirements.md the per-skill install matrix).
 #
 # Consumers:
-#   - python3 -m traust.cli.check_drift — the `external-tools:*` rows read their
+#   - python3 -m traust.cli check drift — the `external-tools:*` rows read their
 #     roster and expected floors from this file (installed < expected
 #     reports `drift`; installed behind the latest upstream release past
 #     the grace window reports `stale`).

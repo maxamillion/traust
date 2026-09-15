@@ -15,7 +15,7 @@
 # would bury triage; enabling the calibrated subset costs ~1.4 novel/repo.
 #
 # Promotion requires the opengrep-ruleset-plan gate. Rediscovery is measured
-# pre-flight by python3 -m traust.cli.calibrate_rule_pack; precision cannot exist until
+# pre-flight by python3 -m traust.cli impact calibrate-rule-pack; precision cannot exist until
 # a rule has run, so it accrues afterwards from scanner_correlation and is
 # re-checked on the lane's cadence.
 #

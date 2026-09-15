@@ -910,6 +910,108 @@ def skills_reference_failures(repo: Path = REPO) -> list[str]:
     return []
 
 
+# --- CLI invocation syntax --------------------------------------------------
+# The CLI is grouped (`traust <group> <op>`). Each module still answers to the
+# pre-grouping `python3 -m traust.cli.<module>` via its `__main__` delegate, so
+# a stale doc example keeps working and drifts silently. Docs standardise on the
+# grouped form; this catches the dot-separated one.
+#
+# `traust.cli.<module>` WITHOUT the `python3 -m` prefix is a module path, not an
+# invocation (e.g. traust.cli.budget_shadow, which has no CLI at all), so only
+# the runnable spelling is flagged.
+_DOT_INVOKE_RX = re.compile(r"python3 -m traust\.cli\.([a-z_][a-z0-9_]*)")
+
+
+def _grouped_form(repo: Path, module: str) -> str | None:
+    """The `<group> <op>` a module's __main__ delegate forwards to, if any."""
+    src = repo / "src" / "traust" / "cli" / f"{module}.py"
+    if not src.exists():
+        return None
+    m = re.search(
+        r'main\(\s*\[\s*"([a-z][a-z-]*)"\s*,\s*"([a-z][a-z-]*)"',
+        src.read_text(encoding="utf-8"),
+    )
+    return f"{m.group(1)} {m.group(2)}" if m else None
+
+
+# docs/cli-reference.md documents the deprecated spellings on purpose, so it is
+# the one file where they are not drift. Same shape as the partial-enum check
+# exempting the schema doc that owns the enum.
+_CLI_SYNTAX_EXEMPT = {"docs/cli-reference.md"}
+
+
+def cli_syntax_failures(repo: Path = REPO) -> list[str]:
+    failures = []
+    docs = list(_count_docs(repo))
+    docs += sorted(p for p in (repo / "config").iterdir() if p.is_file())
+    docs += sorted((repo / "harnessing").glob("*/SKILL.md"))
+    docs += sorted((repo / "harnessing").glob("*/*/SKILL.md"))
+    docs += sorted((repo / ".claude" / "commands").glob("*.md"))
+    for doc in docs:
+        if not doc.exists() or doc.is_symlink():
+            continue
+        try:
+            text = doc.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        rel = doc.relative_to(repo)
+        if rel.as_posix() in _CLI_SYNTAX_EXEMPT:
+            continue
+        for m in _DOT_INVOKE_RX.finditer(text):
+            module = m.group(1)
+            grouped = _grouped_form(repo, module)
+            fix = (
+                f"python3 -m traust.cli {grouped}"
+                if grouped
+                else f"`traust.cli.{module}` (no CLI — reference it as a module path)"
+            )
+            failures.append(
+                f"{rel}: `python3 -m traust.cli.{module}` uses the pre-grouping "
+                f"invocation — use {fix}"
+            )
+    return failures
+
+
+def cli_reference_failures(repo: Path = REPO) -> list[str]:
+    """docs/cli-reference.md's group/op table vs the live GROUPS registry."""
+    doc = repo / "docs" / "cli-reference.md"
+    if not doc.exists():
+        return [f"docs/cli-reference.md is missing — it is the canonical CLI listing"]
+    try:
+        from traust.cli.groups import GROUPS
+    except ImportError as exc:  # pragma: no cover
+        return [f"docs/cli-reference.md: cannot import GROUPS ({exc})"]
+
+    text = doc.read_text(encoding="utf-8")
+    failures = []
+    documented = {
+        m.group(1): {o.strip(" `") for o in m.group(2).split(",")}
+        for m in re.finditer(r"^\| `([a-z]+)` \| [^|]* \| (.+?) \|$", text, re.MULTILINE)
+    }
+    for group, ops in GROUPS.items():
+        if group == "tools":  # deprecated; listed prose-side, not in the table
+            continue
+        if group not in documented:
+            failures.append(f"docs/cli-reference.md: group `{group}` is not listed")
+            continue
+        missing = set(ops) - documented[group]
+        extra = documented[group] - set(ops)
+        if missing:
+            failures.append(
+                f"docs/cli-reference.md: group `{group}` missing op(s) "
+                f"{', '.join(sorted(missing))}"
+            )
+        if extra:
+            failures.append(
+                f"docs/cli-reference.md: group `{group}` lists op(s) not in the "
+                f"registry: {', '.join(sorted(extra))}"
+            )
+    for group in documented:
+        if group not in GROUPS:
+            failures.append(f"docs/cli-reference.md: `{group}` is not a real group")
+    return failures
+
+
 CHECKS = [
     ("unresolved conflict markers", conflict_marker_failures),
     ("generated skills reference (docs/skills.md matches the tree)", skills_reference_failures),
@@ -929,6 +1031,8 @@ CHECKS = [
     ("partial enum quotes (doc enumerations vs schema enums)", partial_enum_failures),
     ("as-of banners on assessment/draft docs", asof_banner_failures),
     ("phantom skills (doc rows naming skills not in the tree)", phantom_skill_failures),
+    ("CLI invocation syntax (grouped `<group> <op>`, not dot-separated)", cli_syntax_failures),
+    ("CLI reference drift (docs/cli-reference.md vs GROUPS registry)", cli_reference_failures),
 ]
 
 

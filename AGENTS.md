@@ -33,7 +33,7 @@ When editing a skill, always edit the file under `harnessing/`. Never create a s
 
 ### Scripts
 
-Multi-skill CLIs live in `src/traust/cli/` and are invoked as python3 -m traust.cli.<name>. Ops and one-shot migrations live under `src/traust/{ops,migrations}/`. Single-skill CLIs are co-located under `harnessing/<skill>/scripts/`.
+Multi-skill CLIs live in `src/traust/cli/` and are invoked as `traust <group> <op>` (or `python3 -m traust.cli <group> <op>` from the harness venv) — see [docs/cli-reference.md](docs/cli-reference.md). Each module also still answers to `python3 -m traust.cli.<module>` via its `__main__` delegate, but the grouped form is what docs and skills use. Ops and one-shot migrations live under `src/traust/{ops,migrations}/`. Single-skill CLIs are co-located under `harnessing/<skill>/scripts/`.
 
 ## Script placement rule
 
@@ -111,7 +111,7 @@ and the semver constraint in `dependencies`, then `uv lock` and `uv sync`.
 2. Add implementation scripts alongside `SKILL.md` if needed
 3. Link it for both agents by running [`bin/link_skills.sh`](bin/link_skills.sh) (it walks both levels and names the link after the skill, not the stage)
 4. Optionally add a slash command: create `.claude/commands/<name>.md` and symlink `.crush/commands/<name>.md → ../../.claude/commands/<name>.md`
-5. **Wire the integrations.** Diff the new skill's inputs/outputs against the rest of the harness: for every artifact it emits, either wire a consumer (and reference the producer from the consuming skill) or record why it is terminal; for every artifact it consumes, name the producer. Document the result in an `## Integrations` section in the SKILL.md — python3 -m traust.cli.check_skill_alignment (rules A9/A10, pre-commit) enforces both, and an unwired artifact is a gate failure, not a style nit. The under-wired launches of operator-priv-profile and impact-analysis are the failure mode this step exists to prevent.
+5. **Wire the integrations.** Diff the new skill's inputs/outputs against the rest of the harness: for every artifact it emits, either wire a consumer (and reference the producer from the consuming skill) or record why it is terminal; for every artifact it consumes, name the producer. Document the result in an `## Integrations` section in the SKILL.md — python3 -m traust.cli check skill-alignment (rules A9/A10, pre-commit) enforces both, and an unwired artifact is a gate failure, not a style nit. The under-wired launches of operator-priv-profile and impact-analysis are the failure mode this step exists to prevent.
 
 ## Security Testing Context
 
@@ -167,7 +167,7 @@ Tag each release: `git tag v$(cat VERSION)`.
 
 ### Dashboards
 
-Changes to report schemas, finding disposition states, or metrics computed by skills like `track-findings`, `findings-trends`, `executive-summary-findings`, `loc-dashboard`, or `validation-fuzz-dashboard` can silently break or invalidate what those dashboards render. When you change the harness in a way that could affect a dashboard's inputs or assumptions, rebuild the affected dashboards with `/refresh-dashboards` (python3 -m traust.cli.refresh_dashboards — per-stage via `--only`); `/drift-watch`'s `dashboards:*` rows are the staleness backstop. Emitters that place untrusted text in dashboard output use `traust_engine.escaping` (see Code Standards).
+Changes to report schemas, finding disposition states, or metrics computed by skills like `track-findings`, `findings-trends`, `executive-summary-findings`, `loc-dashboard`, or `validation-fuzz-dashboard` can silently break or invalidate what those dashboards render. When you change the harness in a way that could affect a dashboard's inputs or assumptions, rebuild the affected dashboards with `/refresh-dashboards` (python3 -m traust.cli dashboard refresh — per-stage via `--only`); `/drift-watch`'s `dashboards:*` rows are the staleness backstop. Emitters that place untrusted text in dashboard output use `traust_engine.escaping` (see Code Standards).
 
 ## Documentation upkeep
 

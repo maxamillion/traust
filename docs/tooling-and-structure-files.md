@@ -7,7 +7,7 @@ The schemas below (from the installed `traust-contracts` package) are the comple
 | Component | Purpose |
 |---|---|
 | python3 -m traust.cli util safe-exec + `$TRAUST_CONFIG_HOME/safe-exec-profiles.yaml` | Enforced sandbox for target-derived commands (argv allowlists, env scrub, shell-free pipelines) — gate rule S10; [docs/safe-exec.md](safe-exec.md) |
-| python3 -m traust.cli.refresh_dashboards | The packaged dashboards rebuild (projections → builders → scoreboard) — `/refresh-dashboards` |
+| python3 -m traust.cli dashboard refresh | The packaged dashboards rebuild (projections → builders → scoreboard) — `/refresh-dashboards` |
 | `traust_engine.escaping` | Shared untrusted-text helpers every emitter uses (HTML, inline-script JSON, md cells, CSV, slugs) — library import, not a CLI |
 | `schemas/v1/report.schema.json` | JSON Schema (draft 2020-12) for security-audit reports |
 | `schemas/v1/triage.schema.json` | JSON Schema for TRIAGE.json validation |
@@ -45,31 +45,31 @@ The schemas below (from the installed `traust-contracts` package) are the comple
 | python3 -m traust.cli reporting render | Renders validated JSON reports to Markdown |
 | python3 -m traust.cli reporting sarif | Exports any report (incl. disposition-aware findings-current and cloud-config audits) to SARIF 2.1.0 for any SARIF consumer — a derived projection, dispositions become suppressions; `--results-root` batch sweep |
 | harnessing/4-triage/triage/scripts/render_triage.py | Renders triage reports |
-| python3 -m traust.cli.check_citations | Citation verification gate for findings |
+| python3 -m traust.cli check citations | Citation verification gate for findings |
 | harnessing/4-triage/triage/scripts/lint_verdict_citations.py | Verdict citation linter |
-| python3 -m traust.cli.build_symbol_index | Builds symbol index for triage acceleration |
-| python3 -m traust.cli.query_index | Queries the symbol index |
+| python3 -m traust.cli build symbol-index | Builds symbol index for triage acceleration |
+| python3 -m traust.cli admin query-index | Queries the symbol index |
 | harnessing/4-triage/track-findings/scripts/baseline_claims.py | Baseline claim extraction |
-| python3 -m traust.cli.emit_triage_ledger_events | Emits triage→ledger events from triage output |
+| python3 -m traust.cli ledger emit-triage | Emits triage→ledger events from triage output |
 | python3 -m traust.migrations.reemit_legacy_triage | Migrates legacy triage data to current format |
-| python3 -m traust.cli.countersign | Countersign workflow support |
-| python3 -m traust.cli.check_docs_consistency | Doc-drift detection for harness docs |
-| python3 -m traust.cli.cluster_state_diff | P5 discovery sweep 1 — before/after security-state snapshots (RBAC, SCCs, webhooks, NetworkPolicies, Services/Routes) diffed into validation-discovery candidates for /triage |
+| python3 -m traust.cli admin countersign | Countersign workflow support |
+| python3 -m traust.cli check docs-consistency | Doc-drift detection for harness docs |
+| python3 -m traust.cli impact cluster-state-diff | P5 discovery sweep 1 — before/after security-state snapshots (RBAC, SCCs, webhooks, NetworkPolicies, Services/Routes) diffed into validation-discovery candidates for /triage |
 | python3 -m traust.cli sweep benchmark | P7 validation-lane benchmark — vulnerable/safe-twin fixtures, confirm-recall + refute-precision + severity-accuracy floors, hybrid release-cut/monthly cadence (check-trigger + drift-watch) |
-| python3 -m traust.cli.attest_target | P2 pre-flight target attestation for validation lanes — fail-closed environment gate (cluster fingerprint, CSV/pod readiness, version-in-range, URL reachability) emitting target-attestation.json |
+| python3 -m traust.cli admin attest-target | P2 pre-flight target attestation for validation lanes — fail-closed environment gate (cluster fingerprint, CSV/pod readiness, version-in-range, URL reachability) emitting target-attestation.json |
 | python3 -m traust.cli registry models | Model-registry loader/resolver — role→model resolution with floor enforcement, routing stamps, spend recording (docs/model-routing.md) |
-| python3 -m traust.cli.checkpoint | Agent checkpoint support |
-| python3 -m traust.cli.check_fix_propagation | Deterministic cross-repo fix-propagation check — has the original repo consumed the fixed module version (go.mod/vendor, lockfiles, shipped-image SBOMs)? Feeds verify-remediation's two-legged rule |
+| python3 -m traust.cli admin checkpoint | Agent checkpoint support |
+| python3 -m traust.cli check fix-propagation | Deterministic cross-repo fix-propagation check — has the original repo consumed the fixed module version (go.mod/vendor, lockfiles, shipped-image SBOMs)? Feeds verify-remediation's two-legged rule |
 | python3 -m traust.cli impact analyze | CVE impact analysis across the portfolio graph — blast radius, L4 refinement, language-specific deep scan (GoAnalyzer: govulncheck + ELF, the strongest reachability tier; other ecosystems get manifest-level analyzers); `--ecosystem` seeds a non-Go blast radius, `--skip-scan` for graph-only, `--jobs N` for parallel workers |
-| python3 -m traust.cli.route_regressions | Direct-ledger routing for follow-up-scan findings — transcribes verify-remediation regressions into the ledger as event-carried findings with campaign IDs (never the baseline — gate A15) (no triage precondition); idempotent |
+| python3 -m traust.cli route regressions | Direct-ledger routing for follow-up-scan findings — transcribes verify-remediation regressions into the ledger as event-carried findings with campaign IDs (never the baseline — gate A15) (no triage precondition); idempotent |
 | python3 -m traust.cli corpus precedent | Tiered FP-precedent index (human-countersigned > machine-refuted-sound) keyed by finding fingerprint — kills shared-component re-refutation; consumed by /triage and the Precision Gate |
 | python3 -m traust.cli sweep | Class-generalization sweep loop: confirmed finding → candidate rule → corpus-wide sweep → triage-ready candidates |
 | python3 -m traust.cli sweep mine | The /mine-ledger miner — confirmed-TP corpus, cluster coverage vs the opengrep pack, per-rule campaign precision |
 | harnessing/mine-ledger/scripts/emit_rule_drafts.py | Regression-rule draft staging from resolved-at-fix-commit findings (pre/post calibration pairs) |
 | python3 -m traust.cli sweep rule-lane | The weekly rule-mining lane runner — miner → sweep collect/draft → bounded draft staging → `lane-delta.{json,md}` vs the previous mine; exit 1 when the delta needs authoring attention |
 | harnessing/census/scripts/check_repo_liveness.py | Census-owned repo-liveness sweep (active/archived/moved/missing, status_since ratcheting) |
-| python3 -m traust.cli.check_skill_alignment | Pre-commit cross-skill contract gate (A-series rules) |
-| python3 -m traust.cli.check_skill_security | Pre-commit security-posture gate (S-series rules incl. S9 repo-config isolation) |
+| python3 -m traust.cli check skill-alignment | Pre-commit cross-skill contract gate (A-series rules) |
+| python3 -m traust.cli check skill-security | Pre-commit security-posture gate (S-series rules incl. S9 repo-config isolation) |
 | python3 -m traust.cli adapters crypto-audit | Unopinionated crypto data collector — source/image/cluster tiers emit `crypto-audit/v1` JSON |
 | python3 -m traust.cli adapters crypto-probe | Source-level crypto provider census (imported by crypto_audit.py) |
 | python3 -m traust.cli util elf | General-purpose ELF binary analyzer (linked libraries, byte scanning) |
