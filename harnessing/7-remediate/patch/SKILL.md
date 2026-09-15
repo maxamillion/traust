@@ -953,3 +953,12 @@ candidate diffs for a human to review and apply out-of-band, with no
 the `/remediate-finding` → `/verify-remediation` fork flow; a patch
 accepted from this packet enters the ledger only through those lanes
 (or a human-recorded `/track-findings` event), never automatically.
+
+**Optional external reviewer aid.** Reviewing this packet is manual, and an
+installed third-party plugin can render the diff for that review:
+[review-walkthrough](https://github.com/trailofbits/skills/tree/main/plugins/review-walkthrough)
+from the `trailofbits` marketplace. It is entirely optional, invoked directly
+by the reviewer, and nothing here depends on it: no step below calls it, and
+its absence changes no output. Its licence posture and freshness row are
+recorded in `docs/external-dependencies.md` under **Agent skills (runtime
+plugins)** — it is used, never adapted into this tree.
