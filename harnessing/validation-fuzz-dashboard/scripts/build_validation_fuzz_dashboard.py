@@ -496,6 +496,18 @@ def _population_html(lines):
     )
 
 
+def markdown_path(out_path, out_md=None):
+    """Resolve the Markdown companion for the HTML output.
+
+    Defaults to the HTML path with a ``.md`` suffix so the pair always lands in
+    one directory. ``Path(out_path).stem`` would drop the parent as well as the
+    suffix, yielding a bare CWD-relative name — that split the Markdown from
+    its HTML whenever the script ran from somewhere other than the dashboards
+    directory.
+    """
+    return Path(out_md) if out_md else Path(out_path).with_suffix(".md")
+
+
 def build(root, out_path, out_md=None, config_home=None):
     v = scan_validations(root)
     fz = scan_fuzz(root)
@@ -695,7 +707,7 @@ document.querySelectorAll('rect.seg').forEach(r => {{
     md = build_markdown(v, fz, now, totals, attempted, grand, cov, stacked_tbl)
     if pop_lines:
         md += "\n---\n\n" + "\n".join(pop_lines) + "\n"
-    out_md = out_md or (Path(out_path).stem + ".md")
+    out_md = markdown_path(out_path, out_md)
     with Path(out_md).open("w", encoding="utf-8") as f:
         f.write(md)
     print(
@@ -753,10 +765,14 @@ def main(argv=None) -> int:
     ap.add_argument(
         "--out",
         default=None,
-        help="output path (default: <results-root>/Live-validation-fuzz-dashboard.html)",
+        help="html output path (default: <progress-tracker>/metrics/dashboards/"
+        "Live-validation-fuzz-dashboard.html, falling back to <results-root>/ "
+        "when no progress-tracker is configured)",
     )
     ap.add_argument(
-        "--out-md", default=None, help="markdown output path (default: same stem as --out with .md)"
+        "--out-md",
+        default=None,
+        help="markdown output path (default: alongside --out, same name with .md)",
     )
     args = ap.parse_args(argv)
     results = resolve_results_root(args)
