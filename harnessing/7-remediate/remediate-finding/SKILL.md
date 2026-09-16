@@ -286,13 +286,12 @@ so the campaign inherits Phase 4's boundary: rootless, cap-dropped,
 `no-new-privileges`, credential-free, `--network=none`, digest-pinned image,
 and a disposable copy rather than your worktree.
 
-Two boundaries are accepted, and **no unattested fallback**: nested podman
-(default when a working runtime is present), or a platform-attested sandbox
-declared by the orchestrator via `TRAUST_SANDBOXED_RUNNER` — the case that
-matters on a central runner whose image carries the toolchain but cannot nest
-containers. With neither, the lane emits `not_attempted` rather than running
-target code in the open. Which boundary produced a verdict is recorded in the
-evidence item's `command`, because the two are not equally strong.
+How it executes is one deployment setting — `sandbox:` in
+`$TRAUST_CONFIG_HOME/execution-boundaries.yaml`, `none` by default (direct,
+scrubbed environment) or `podman` for a nested container. A configured
+`podman` mode is never silently downgraded: with no working runtime the lane
+reports `not_attempted`. The mode is recorded in the evidence item's
+`command`, because the two are not equally strong.
 
 ---
 

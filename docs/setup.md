@@ -165,6 +165,13 @@ resolve from `$TRAUST_CONFIG_HOME/locations.yaml` — copy
 you use. There are no environment overrides for workspace, analysis-results,
 progress-tracker, or feeds-cache.
 
+How the lanes that execute a target repository's build/test code run is a
+deployment setting, not an environment variable: `sandbox:` in
+`$TRAUST_CONFIG_HOME/execution-boundaries.yaml`, defaulting to `none`
+(direct execution, scrubbed environment, disposable copy). Set it to
+`podman` for a nested rootless container instead — see
+[external-dependencies.md](external-dependencies.md) for the full contract.
+
 Example for a mono-checkout:
 
 ```yaml

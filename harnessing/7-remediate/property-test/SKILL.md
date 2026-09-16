@@ -159,10 +159,10 @@ credential-free, `--network=none` for both test runs, digest-pinned image, and
 disposable copies so neither run can touch the worktree the patch diff comes
 from.
 
-Two boundaries are accepted and there is **no unattested fallback**: nested
-podman, or a platform-attested sandbox declared via
-`TRAUST_SANDBOXED_RUNNER` (see `docs/external-dependencies.md`). With neither,
-the lane reports `not_attempted`. The boundary is recorded in the evidence.
+The mode comes from `sandbox:` in
+`$TRAUST_CONFIG_HOME/execution-boundaries.yaml` — `none` by default, or
+`podman` for a nested container, which is never silently downgraded (see
+`docs/external-dependencies.md`). The mode is recorded in the evidence.
 
 ## Integrations
 

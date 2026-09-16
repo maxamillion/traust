@@ -13,9 +13,9 @@
 # rootless, cap-dropped, no-new-privileges, credential-free, digest-pinned
 # image, --network=none for the test runs. Dependencies are fetched in a
 # separate networked, script-less step (pip --no-deps on a pinned version,
-# rule S7) exactly as run_checks.sh prefetches. No UNATTESTED fallback:
-# without podman or a declared platform sandbox there is no boundary and
-# therefore no evidence.
+# rule S7) exactly as run_checks.sh prefetches. The mode comes from
+# `sandbox:` in $TRAUST_CONFIG_HOME/execution-boundaries.yaml (default
+# `none`); a configured `podman` mode is never silently downgraded.
 #
 # Neither run touches the caller's worktree. Both are disposable copies —
 # the patched one as-is, the base one reset to <base-ref> with the property
@@ -68,35 +68,44 @@ INNER
   exit 0
 }
 
-# --- execution boundary ------------------------------------------------------
-# Both runs execute the target's suite, so one of two boundaries is required.
-# See run_mutation.sh for the full rationale; the contract is identical:
+# --- execution boundary (config, not environment) ----------------------------
+# How target build/test code runs is a deployment decision, read once from
+# $TRAUST_CONFIG_HOME/execution-boundaries.yaml:
 #
-#   podman   — nested container, the workstation case, default when present.
-#   attested — already inside a platform-supplied sandbox whose image carries
-#              the toolchain, declared via TRAUST_SANDBOXED_RUNNER.
+#   none    (default) run directly — scrubbed env, disposable copy
+#   podman  nested rootless container, --network=none, digest-pinned image
 #
-# The env var is a declaration of deployment fact, NOT a security control. It
-# exists so podman's absence is never read as permission to run target code in
-# the open. Neither boundary => `not_attempted`, never a silent downgrade.
+# `podman` is not silently downgraded: if the mode asks for a container and no
+# working runtime exists, the lane reports `not_attempted`, because quietly
+# weakening the boundary someone configured is worse than producing no
+# evidence. Detection is `podman info` rather than `command -v podman` — the
+# client binary exists on a host whose VM is stopped and in images that ship
+# the CLI with no runtime.
+#
+# The resolved mode is recorded in the emitted evidence.
 resolve_boundary() {
-  # `command -v podman` is the WRONG probe: it finds the client binary, which
-  # is present on a Mac whose VM is stopped and in images that ship the CLI
-  # with no working runtime. Every run then fails with exit 125 — the exact
-  # failure this resolver exists to avoid. `podman info` round-trips to the
-  # runtime, so it answers "can I actually run a container", and it is cheap
-  # (no image pull).
-  if command -v podman >/dev/null 2>&1 && podman info >/dev/null 2>&1; then
-    printf 'podman'
-  elif [[ -n "${TRAUST_SANDBOXED_RUNNER:-}" ]]; then
-    printf 'attested:%s' "$TRAUST_SANDBOXED_RUNNER"
-  else
-    printf ''
-  fi
+  local cfg="${TRAUST_CONFIG_HOME:-$HOME/.traust/config}/execution-boundaries.yaml"
+  local mode
+  mode="$(python3 - "$cfg" <<'CFG'
+import sys
+mode = "none"
+try:
+    import yaml
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        doc = yaml.safe_load(fh) or {}
+    mode = str(doc.get("sandbox") or "none").strip().lower()
+except Exception:
+    pass  # absent or unreadable config -> the documented default
+print(mode if mode in ("none", "podman") else "none")
+CFG
+)"
+  printf '%s' "$mode"
 }
 
 BOUNDARY="$(resolve_boundary)"
-[[ -z "$BOUNDARY" ]] && emit_not_attempted "no execution boundary: podman is unavailable and TRAUST_SANDBOXED_RUNNER is unset, so the differential would run target code unsandboxed"
+if [[ "$BOUNDARY" == podman ]] && ! podman info >/dev/null 2>&1; then
+  emit_not_attempted "execution-boundaries.yaml asks for sandbox: podman but no working podman runtime is available"
+fi
 [[ -f "$WORK/pyproject.toml" || -f "$WORK/setup.py" || -f "$WORK/setup.cfg" ]] \
   || emit_not_attempted "not a Python project; Go (rapid) and TS (fast-check) are not wired yet"
 [[ -f "$WORK/$TEST_PATH" ]] || emit_not_attempted "property test not found at $TEST_PATH"
@@ -153,8 +162,8 @@ in_boundary() {
       -v "$sandbox":/work:Z \
       -w /work "$IMG_PY" bash -c "$*"
   else
-    # /work is the container path baked into the commands; on the attested
-    # path the sandbox IS the working directory, so rewrite it.
+    # sandbox: none — /work is the container path baked into the commands, so
+    # rewrite it to the real sandbox directory.
     local cmd="${*//\/work/$sandbox}"
     ( cd "$sandbox" && env -i PATH="$PATH" HOME="${HOME:-/tmp}" \
         PYTHONDONTWRITEBYTECODE=1 bash -c "$cmd" )

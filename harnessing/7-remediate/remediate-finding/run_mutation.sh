@@ -11,13 +11,13 @@
 # exactly: rootless, cap-dropped, no-new-privileges, credential-free,
 # --network=none, digest-pinned image, and a disposable copy rather than the
 # caller's worktree (so no .git of the real checkout is reachable at all).
-# There is deliberately NO UNATTESTED fallback: either podman provides the
-# boundary, or the orchestrator declares the surrounding job already is one
-# (TRAUST_SANDBOXED_RUNNER, see resolve_boundary). With neither, the script
-# emits `not_attempted: <reason>` and exits 0 — an honest evidence item rather
-# than a silent decision to run target code in the open. run_checks.sh already
-# records that PATH shims are "not a boundary", and a mutation campaign
-# executes target code N times instead of once.
+# The mode is a deployment setting (`sandbox:` in
+# $TRAUST_CONFIG_HOME/execution-boundaries.yaml), defaulting to `none`. A
+# configured `podman` mode is never silently downgraded: with no working
+# runtime the script emits `not_attempted` instead. Either way the campaign
+# runs on a disposable copy with a scrubbed environment — run_checks.sh
+# records that PATH shims alone are "not a boundary", and a mutation campaign
+# executes target code N times rather than once.
 #
 # Scope: Go only. mewt supports C++, DAML, Go, JS/TS, Rust, Solidity and Move
 # but NOT Python, so mutation evidence is never portfolio-wide assurance.
@@ -65,46 +65,43 @@ PY
   exit 0
 }
 
-# --- execution boundary ------------------------------------------------------
-# This runs the target's own test suite, so it must execute inside SOME
-# boundary. Two are acceptable:
+# --- execution boundary (config, not environment) ----------------------------
+# How target build/test code runs is a deployment decision, read once from
+# $TRAUST_CONFIG_HOME/execution-boundaries.yaml:
 #
-#   podman   — nested container, the workstation case. Strongest, and default
-#              whenever podman is present.
-#   attested — the process is ALREADY inside a credential-free, network-
-#              restricted sandbox supplied by the platform (a CI/Konflux job
-#              pod whose image carries the scanner binaries, per
-#              docs/continuous-operations.md). Declared by the orchestrator
-#              setting TRAUST_SANDBOXED_RUNNER to a short label naming it.
+#   none    (default) run directly — scrubbed env, disposable copy
+#   podman  nested rootless container, --network=none, digest-pinned image
 #
-# TRAUST_SANDBOXED_RUNNER is a DECLARATION OF DEPLOYMENT FACT, not a security
-# control: anything that can set an env var can set it, and it buys nothing
-# against an attacker already executing here. Its only job is to stop the
-# ABSENCE of podman from being read as permission to run target code in the
-# open. With neither boundary there is no evidence — `not_attempted`, never a
-# silent downgrade.
+# `podman` is not silently downgraded: if the mode asks for a container and no
+# working runtime exists, the lane reports `not_attempted`, because quietly
+# weakening the boundary someone configured is worse than producing no
+# evidence. Detection is `podman info` rather than `command -v podman` — the
+# client binary exists on a host whose VM is stopped and in images that ship
+# the CLI with no runtime.
 #
-# The resolved boundary is recorded in the emitted evidence so a reader can
-# always tell which one produced a verdict.
+# The resolved mode is recorded in the emitted evidence.
 resolve_boundary() {
-  # `command -v podman` is the WRONG probe: it finds the client binary, which
-  # is present on a Mac whose VM is stopped and in images that ship the CLI
-  # with no working runtime. Every run then fails with exit 125 — the exact
-  # failure this resolver exists to avoid. `podman info` round-trips to the
-  # runtime, so it answers "can I actually run a container", and it is cheap
-  # (no image pull).
-  if command -v podman >/dev/null 2>&1 && podman info >/dev/null 2>&1; then
-    printf 'podman'
-  elif [[ -n "${TRAUST_SANDBOXED_RUNNER:-}" ]]; then
-    printf 'attested:%s' "$TRAUST_SANDBOXED_RUNNER"
-  else
-    printf ''
-  fi
+  local cfg="${TRAUST_CONFIG_HOME:-$HOME/.traust/config}/execution-boundaries.yaml"
+  local mode
+  mode="$(python3 - "$cfg" <<'CFG'
+import sys
+mode = "none"
+try:
+    import yaml
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        doc = yaml.safe_load(fh) or {}
+    mode = str(doc.get("sandbox") or "none").strip().lower()
+except Exception:
+    pass  # absent or unreadable config -> the documented default
+print(mode if mode in ("none", "podman") else "none")
+CFG
+)"
+  printf '%s' "$mode"
 }
 
 mewt_in_boundary() {
-  # mewt_in_boundary <cmd...> — run under the resolved boundary, always
-  # against the disposable copy, never the caller's worktree.
+  # mewt_in_boundary <cmd...> — run under the configured mode, always against
+  # the disposable copy, never the caller's worktree.
   if [[ "$BOUNDARY" == podman ]]; then
     podman run --rm --network=none \
       --security-opt=no-new-privileges --cap-drop=ALL \
@@ -115,8 +112,8 @@ mewt_in_boundary() {
       -v "$MEWT":/usr/local/bin/mewt:ro,Z \
       -w /work "$IMG_GO" "$@"
   else
-    # The surrounding job IS the boundary. Still scrub the environment and
-    # deny module egress, so the attested path is not merely "run it raw".
+    # sandbox: none — scrub the environment and deny module egress anyway, so
+    # "direct" still is not "run it raw with whatever is ambient".
     ( cd "$SANDBOX" && env -i PATH="$PATH" HOME="${HOME:-/tmp}" \
         GOFLAGS="${GOFLAGS:-}" GOPROXY=off "$@" )
   fi
@@ -125,7 +122,9 @@ mewt_in_boundary() {
 MEWT="$(command -v mewt 2>/dev/null)"
 [[ -z "$MEWT" ]] && emit_not_attempted "mewt is not installed on this host"
 BOUNDARY="$(resolve_boundary)"
-[[ -z "$BOUNDARY" ]] && emit_not_attempted "no execution boundary: podman is unavailable and TRAUST_SANDBOXED_RUNNER is unset, so the campaign would run target code unsandboxed"
+if [[ "$BOUNDARY" == podman ]] && ! podman info >/dev/null 2>&1; then
+  emit_not_attempted "execution-boundaries.yaml asks for sandbox: podman but no working podman runtime is available"
+fi
 [[ -f "$WORK/go.mod" ]] || emit_not_attempted "not a Go module; mewt has no Python support and other languages are out of scope here"
 
 MEWT_VERSION="$("$MEWT" --version 2>/dev/null | head -1)"

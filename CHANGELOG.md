@@ -2,6 +2,28 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.4]
+
+- **The execution boundary is a config setting, not an invented env var.**
+  0.2.3 added `TRAUST_SANDBOXED_RUNNER`, a variable nothing on the platform
+  exports — a convention only this repo knew about, so the path it guarded
+  would never have fired. Replaced by `sandbox:` in
+  `$TRAUST_CONFIG_HOME/execution-boundaries.yaml`, with a template in
+  `config/` seeded by `install_traust`.
+
+  `sandbox: none` is the default: direct execution with a scrubbed
+  environment, on a disposable copy rather than the worktree the diff comes
+  from. `sandbox: podman` opts into a nested rootless container and is never
+  silently downgraded — with no working runtime the lane reports
+  `not_attempted`. Detection stays `podman info` rather than
+  `command -v podman`.
+
+  Verified on both lanes in both modes: default runs and returns `proves`
+  (mutation 19/19; property failed-then-passed), a configured `podman` with no
+  runtime refuses with that reason, and an invalid value falls back to the
+  documented default. Documented in setup.md, config/README.md,
+  external-dependencies.md and the orchestrator prerequisites.
+
 ## [0.2.3]
 
 - **The evidence lanes no longer hard-require podman.** `run_mutation.sh` and

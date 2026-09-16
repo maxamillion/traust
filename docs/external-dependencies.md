@@ -133,30 +133,29 @@ manifest doubles as the job-image install target, so adding an optional
 AGPL engine to the shipped roster would push it into every adopter's image.
 Adopters who install the plugin add their own row.
 
-**The execution boundary for evidence lanes, and why podman is not mandatory.**
+**The execution boundary for evidence lanes, and why podman is optional.**
 `run_checks.sh`, `run_mutation.sh` and `run_property.sh` all execute a target
-repository's own build/test code, which is hostile-input execution (rule S10).
-Two boundaries are accepted:
+repository's own build/test code — hostile-input execution (rule S10). How
+they do it is one deployment setting, `sandbox:` in
+`$TRAUST_CONFIG_HOME/execution-boundaries.yaml`:
 
-1. **Nested podman** — the workstation case, and the default whenever a
-   *working* runtime is present.
-2. **A platform-attested sandbox** — the process is already inside a
-   credential-free, network-restricted job whose image carries the toolchain,
-   as `docs/continuous-operations.md` specifies for the orchestrator. The
-   orchestrator declares this by setting `TRAUST_SANDBOXED_RUNNER` to a short
-   label naming the runner.
+- **`none`** (default) — direct execution with a scrubbed environment, on a
+  disposable copy rather than the worktree the patch diff comes from. What a
+  workstation does today, and what an orchestrated runner needs, since a
+  locked-down job usually cannot nest a container.
+- **`podman`** — nested rootless container, cap-dropped, `no-new-privileges`,
+  credential-free, `--network=none`, digest-pinned image.
 
-`TRAUST_SANDBOXED_RUNNER` is a declaration of deployment fact, **not** a
-security control — anything that can set an env var can set it. Its only job
-is to stop podman's *absence* from being read as permission to run target code
-in the open. With neither boundary the lanes emit `not_attempted` and produce
-no evidence; they never silently downgrade. The boundary that produced a
-verdict is recorded in the evidence item's `command` field, because a result
-from nested podman and one from an attested sandbox are not equally strong.
+A configured `podman` mode is **never silently downgraded**: with no working
+runtime the lane emits `not_attempted`, because quietly weakening a boundary
+someone chose is worse than producing no evidence. Detection is `podman info`,
+not `command -v podman` — the client binary exists on a host whose VM is
+stopped and in images that ship the CLI with no runtime, and picking podman
+there fails every run with exit 125.
 
-Detection uses `podman info`, not `command -v podman`: the client binary is
-present on a host whose VM is stopped and in images that ship the CLI with no
-runtime, and choosing podman there fails every run with exit 125.
+The mode that produced a verdict is recorded in each evidence item's
+`command` field, so a reader can weigh a nested-podman result differently
+from a direct one.
 
 Cluster-provisioning tools (managed-cloud CLIs, installers, deployment
 helpers) are **not** harness dependencies. Live validation needs a reachable

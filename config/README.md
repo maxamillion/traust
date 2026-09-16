@@ -36,6 +36,7 @@ ships a template for each such file:
 
 | Template here | Deployment file | Read by |
 |---|---|---|
+| `execution-boundaries.example.yaml` | `execution-boundaries.yaml` | `run_checks.sh`-family lanes — how target build/test code executes (`sandbox: none` default, or `podman`) |
 | `corpus-config.example.yaml` | `corpus-config.yaml` | `traust_engine.corpus.resolver`, `/census`, every dashboard |
 | `remediation.example.yaml` | `remediation.yaml` | `/remediate-finding` (private mirror org, naming prefix, self-hosted forge hosts) — no shipped default for the org, and none for the forge hosts |
 | `campaign.example.yaml` | `campaign.yaml` | dashboards that cite a tracking reference (`/validation-fuzz-dashboard`, `/generate-team-report`) |
