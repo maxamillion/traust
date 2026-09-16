@@ -569,7 +569,7 @@ patch.
 | `/patch` **static mode** (audit/triage/vuln-scan input) | `fact_differential: cleared` — the backing scanner, re-run on a scratch worktree with the diff applied, no longer fires | **pattern-level only** |
 | `/patch` static mode, finding **not** scanner-backed | `fact_differential: not-applicable: <reason>` | none; the reviewer verdict is the only signal |
 | `/remediate-finding` | the target repo's own build/test suite, run in containment; optionally a typed `evidence[]` item per kind (`mutation` — Phase 4b, Go only; `property` — Phase 4c, Python only) | the project's suite, which was not written for this bug. A `mutation` item raises the ceiling only for the package it ran on: `proves` means the suite detects changes to that code, and `fails_to_prove` means the regression test asserts nothing about them — neither says the fix is correct. A `property` item is the strongest kind available outside the pipeline ladder: `proves` means the property FAILED on the unpatched revision and passes on the patched one, so it witnesses this finding and now guards it — but only over the input domain its strategies generate |
-| `/verify-remediation` | a targeted re-audit against the patched code, same frameworks as the original audit | analysis, not execution — it never compares a baseline revision against a patched one |
+| `/verify-remediation` | a targeted re-audit against the patched code, same frameworks as the original audit; plus an executed `scanner_differential` evidence item when the finding is scanner-backed (step 4-pre.5, both revisions scanned) | analysis for everything except that one differential. A `scanner_differential: proves` says the pattern that evidenced the finding is gone — **pattern-level only**, since a diff can silence a scanner by moving the sink. Findings with no scanner backing stay analysis-only |
 
 Three consequences worth keeping in view:
 
@@ -578,7 +578,9 @@ Three consequences worth keeping in view:
   by moving the sink.
 - **The executable ladder has a narrow footprint.** It needs `vuln-pipeline`
   input, so it does not reach findings that arrived from an audit, triage, or
-  `/vuln-scan`.
+  `/vuln-scan`. Those findings can still carry *typed* evidence — `mutation`
+  and `property` from stage 7, `scanner_differential` from stage 8 — but each
+  kind's ceiling is its own, and none of them is the behavioural ladder.
 - **`verified−proven` has a fix-side twin.** The *validation gap* above measures
   believed risk never empirically demonstrated. The same question asked of
   remediation — believed fixes never empirically demonstrated — has no metric

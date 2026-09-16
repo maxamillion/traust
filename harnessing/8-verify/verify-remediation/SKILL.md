@@ -29,6 +29,7 @@ allowed-tools:
   - Bash(python3 *traust* -m traust_engine.adapters.checkov:*)
   - Bash(python3 *traust* -m traust.cli reporting validate:*)
   - Bash(python3 *traust/harnessing/8-verify/verify-remediation/scripts/build_verify_sweep.py:*)
+  - Bash(python3 *traust/harnessing/8-verify/verify-remediation/scripts/scanner_differential.py:*)
   - Bash(python3 *traust* -m traust.cli.emit_triage_ledger_events:*)
   - Bash(python3 *traust* -m traust.cli.emit_verification_ledger_events:*)
   - Bash(python3 *traust* -m traust.cli.route_regressions:*)
@@ -510,6 +511,36 @@ scanner checks mechanically.
    `deterministic_steps` map (`"ran"` / `"skipped: <reason>"`) mirroring
    the audit convention — a verification performed without the scanners
    is evidentially weaker and must say so, never imply parity.
+5. **Emit it as typed evidence, by scanning BOTH revisions.** Steps 2–3
+   compare a fresh patched scan against facts *recorded in the original
+   report*, which is why step 2 warns that a vanished fact can be rule
+   evolution. Scanning the original commit too removes the ambiguity, and
+   turns the result from prose into a checkable claim:
+
+   ```bash
+   python3 -m traust.cli adapters opengrep <original-checkout> --out /tmp/<repo>-og-base.json
+   python3 harnessing/8-verify/verify-remediation/scripts/scanner_differential.py \
+     --base-report /tmp/<repo>-og-base.json \
+     --patched-report /tmp/<repo>-og-verify.json \
+     --base-ref <original_commit> --rule-id <the finding's rule_id> \
+     >> <out>/verification-evidence.jsonl
+   ```
+
+   Pass `--rule-id` (and/or `--file`) per finding: an unrestricted
+   differential answers a question nobody asked. Collect the items into the
+   report's `evidence[]` (contracts >= 0.4.0).
+
+   | `outcome` | Meaning |
+   |---|---|
+   | `proves` | the rule fired on the original commit and does not on the patched one |
+   | `fails_to_prove` | it still fires — `unresolved`, per step 3 |
+   | `not_attempted: …does not fire on the unpatched revision…` | **the rule-evolution case made explicit.** The finding may not be scanner-backed, or the pack moved. Never read a clean patched scan as proof when there was no baseline fact to clear |
+
+   This is the only executed claim stage 8 makes, and its ceiling is narrow:
+   a cleared fact means *the evidence the finding rested on is gone*, not
+   that the fix is correct or minimal — a diff can silence a scanner by
+   moving the sink. Step 4a's root-cause check remains mandatory. See
+   `docs/disposition-ledger.md` §8a.
 
 Findings with no scanner backing (most injection/authz/logic findings
 from manual review) proceed through 4a–4b unchanged — the differential

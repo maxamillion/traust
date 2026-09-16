@@ -2,6 +2,23 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.2]
+
+- Pin traust-contracts v0.4.0 / traust-engine v0.2.3 / traust-ledger v0.2.2,
+  so a *verification* report can carry the typed patch-evidence block.
+- **`/verify-remediation` gains its one executed claim** (ToB plan item 5b).
+  Step 4-pre already re-ran the scanner on the patched checkout and compared
+  against facts recorded in the original report — which is why it warned that
+  a vanished fact can be rule evolution rather than a code change. New step
+  4-pre.5 scans BOTH revisions and emits a typed `scanner_differential`
+  evidence item, making the rule-evolution case an explicit
+  `not_attempted` instead of a silent mis-read.
+
+  §8a's stage-8 ceiling is lifted for that differential only: `proves` means
+  the pattern the finding rested on is gone — pattern-level, since a diff can
+  silence a scanner by moving the sink. Findings with no scanner backing stay
+  analysis-only, and step 4a's root-cause check remains mandatory.
+
 ## [0.2.1]
 
 - Pin traust-contracts v0.3.0, traust-engine v0.2.2 and traust-ledger v0.2.1 —
