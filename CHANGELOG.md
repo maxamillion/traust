@@ -2,6 +2,18 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.5]
+
+- Point every sibling pin at the new `traust-security` GitHub organisation:
+  traust-contracts v0.4.0, traust-engine v0.2.4, traust-ledger v0.2.3.
+
+  The org move could not be a URL edit. uv honours `[tool.uv.sources]` inside
+  git dependencies, so a tag cut before the move carries the old URL and
+  resolution fails with "conflicting URLs for package traust-contracts". The
+  corrected URL only reaches consumers as a new tag, making this the same
+  bottom-up train a schema change needs: ledger 0.2.3, engine 0.2.4, then
+  here.
+
 ## [0.2.4]
 
 - **The execution boundary is a config setting, not an invented env var.**
