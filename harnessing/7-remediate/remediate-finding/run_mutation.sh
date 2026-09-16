@@ -21,16 +21,30 @@
 # but NOT Python, so mutation evidence is never portfolio-wide assurance.
 # Widening means granting that toolchain in the safe-exec profile first.
 #
+# NEVER RUNS ON THE REMEDIATION WORKTREE. mewt rewrites target files in place
+# and stores state in a `mewt.sqlite` in its working directory; upstream's own
+# docs advise running "against a clean git repo so that you can use
+# `git reset --hard HEAD` to restore any mutations that escape the cleanup
+# phase" (docs/how-it-works.md). The remediation worktree is exactly where the
+# patch diff comes from, so a leaked mutation or a stray database would
+# corrupt the artifact under review. This script therefore copies the
+# worktree, mutates the copy, and deletes it.
+#
+# Cost: a campaign is targets x mutants x test-suite-duration and can run for
+# HOURS. Point it at the package the patch touched, never a repository root,
+# and note the hard timeout below.
+#
 # Usage:
-#   run_mutation.sh <worktree> <target-path> [<out-dir>]
+#   run_mutation.sh <worktree> <target-path> [<out-dir>] [<timeout-seconds>]
 #
 # Output (stdout): one JSON object (a patch_evidence item).
 
 set -uo pipefail
 
-WORK="${1:?usage: run_mutation.sh <worktree> <target-path> [<out-dir>]}"
-TARGET="${2:?usage: run_mutation.sh <worktree> <target-path> [<out-dir>]}"
+WORK="${1:?usage: run_mutation.sh <worktree> <target-path> [<out-dir>] [<timeout-s>]}"
+TARGET="${2:?usage: run_mutation.sh <worktree> <target-path> [<out-dir>] [<timeout-s>]}"
 OUT="${3:-$WORK/.remediation-checks}"
+TIMEOUT_S="${4:-${REMEDIATION_MUTATION_TIMEOUT:-3600}}"
 mkdir -p "$OUT"
 LOG="$OUT/mutation.log"
 
@@ -56,17 +70,28 @@ command -v podman >/dev/null 2>&1 || emit_not_attempted "podman unavailable; a m
 
 MEWT_VERSION="$("$MEWT" --version 2>/dev/null | head -1)"
 
-# Same boundary as run_checks.sh, plus the mewt binary mounted read-only.
+# Disposable copy: mewt mutates in place and its cleanup is documented as
+# best-effort, so the worktree that produces the patch is never the one it
+# touches. Copied with cp -a rather than a fresh checkout so uncommitted
+# state is included exactly as the checks saw it.
+SANDBOX="$(mktemp -d "${TMPDIR:-/tmp}/mewt-sandbox-XXXXXX")"
+cleanup() { chmod -R u+w "$SANDBOX" 2>/dev/null; rm -rf "$SANDBOX"; }
+trap cleanup EXIT INT TERM
+cp -a "$WORK/." "$SANDBOX/" 2>/dev/null || emit_not_attempted "could not copy the worktree to a disposable sandbox"
+
+# Go test command for the campaign; mewt auto-detects the language from the
+# target's extension and has NO --language flag on `run` (verified against
+# src/core/cli.rs RunArgs, mewt 4.x).
 podman run --rm --network=none \
   --security-opt=no-new-privileges --cap-drop=ALL \
   --user "$(id -u):$(id -g)" --userns=keep-id \
   --tmpfs /home/runner:rw,mode=700 -e HOME=/home/runner \
   -e GOFLAGS -e GOMEMLIMIT -e GOMAXPROCS -e GOPROXY=off \
-  -v "$WORK":/work:Z \
-  -v "$WORK/.git":/work/.git:ro,Z \
+  -v "$SANDBOX":/work:Z \
   -v "$MEWT":/usr/local/bin/mewt:ro,Z \
   -w /work "$IMG_GO" \
-  bash -c "mewt run --language go '$TARGET'" >"$LOG" 2>&1
+  timeout --signal=TERM --kill-after=30 "$TIMEOUT_S" \
+  mewt run --test.cmd "go test ./..." "$TARGET" >"$LOG" 2>&1
 RC=$?
 
 python3 - "$LOG" "$RC" "$TARGET" "$MEWT_VERSION" <<'PY'
@@ -89,10 +114,13 @@ for pat, name in ((r"(\d+)\s+survived", "s"), (r"(\d+)\s+killed", "k")):
 # `mewt --version` already prints "mewt <semver>"; don't double the name.
 tool = version if version.lower().startswith("mewt") else f"mewt {version}".strip()
 item = {"kind": "mutation", "tool": tool or "mewt",
-        "command": f"mewt run --language go {target}",
+        "command": f'mewt run --test.cmd "go test ./..." {target}',
         "log_path": log_path, "deterministic_steps": "ran"}
 
-if rc != 0 and survived is None:
+if rc == 124 and survived is None:
+    item["outcome"] = "not_attempted: campaign exceeded its timeout"
+    item["deterministic_steps"] = "skipped: timeout"
+elif rc != 0 and survived is None:
     item["outcome"] = f"not_attempted: mewt exited {rc} without a parseable result"
     item["deterministic_steps"] = f"skipped: mewt exited {rc}"
 elif survived is None:

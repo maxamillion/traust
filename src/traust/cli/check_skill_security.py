@@ -212,6 +212,14 @@ EXEMPTIONS: dict[tuple[str, str], str] = {
     "podman, cap-drop, --network=none test phase, env-stripped "
     "native fallback; P2.11/C1) — stronger containment than "
     "safe_exec argv validation",
+    (
+        "S10",
+        "harnessing/remediate-finding/run_mutation.sh",
+    ): "reviewed — same container boundary as run_checks.sh and strictly "
+    "tighter: rootless podman, cap-drop, no-new-privileges, "
+    "--network=none for the whole campaign (not just the test phase), NO "
+    "native fallback at all, and the campaign runs on a disposable copy so "
+    "mutations cannot reach the worktree under review (ToB plan item 3)",
     # --- S6 tmp-paths ---
     (
         "S6",

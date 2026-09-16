@@ -229,11 +229,23 @@ patch touched means the suite does not detect that change.
 
 ```bash
 bash harnessing/7-remediate/remediate-finding/run_mutation.sh \
-  <worktree> <package-path-the-patch-touched> <out> > <out>/mutation-evidence.json
+  <worktree> <package-path-the-patch-touched> <out> [<timeout-seconds>] \
+  > <out>/mutation-evidence.json
 ```
 
-Pass the *package the patch touched*, not the repository root: a whole-repo
-campaign costs a full test run per mutant and answers a question nobody asked.
+Pass the *package the patch touched*, not the repository root. A campaign
+costs `targets × mutants × suite-duration` and upstream documents runs of
+**hours**; the script defaults to a one-hour timeout
+(`REMEDIATION_MUTATION_TIMEOUT`) and reports
+`not_attempted: campaign exceeded its timeout` rather than hanging the
+remediation.
+
+**It never touches your worktree.** mewt rewrites target files in place and
+keeps state in a `mewt.sqlite` beside them, and upstream advises running
+against a clean repo so escaped mutations can be reset. Since the remediation
+worktree is exactly what the patch diff is taken from, the script copies it to
+a disposable sandbox, mutates the copy, and deletes it — a leaked mutation or a
+stray database can never reach the artifact under review.
 
 **Reading the result.** The script emits one `patch_evidence` item:
 

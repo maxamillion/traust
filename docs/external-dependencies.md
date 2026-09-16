@@ -150,8 +150,14 @@ licenses table below, and rule 6 of the content guard).
 
 | Plugin | Used by | Version at intake | License | Evidence | Risk |
 |---|---|---|---|---|---|
-| review-walkthrough (marketplace `trailofbits`) | patch, remediate-finding — optional aid for the human-review step; renders a branch diff as a standalone HTML walkthrough | 1.2.1 (marketplace manifest, 2026-09-15) | CC-BY-SA-4.0 | [LICENSE](https://github.com/trailofbits/skills/blob/main/LICENSE) · [plugin](https://github.com/trailofbits/skills/tree/main/plugins/review-walkthrough) | **Low while used, not adapted** — invoking it creates no obligation; it reads a git range and writes its own HTML, consuming no harness artifact and writing none |
-| mutation-testing (marketplace `trailofbits`) | remediate-finding Phase 4b (`run_mutation.sh`) — drives the `mewt` engine; see the AGPL and scope notes under CLI tools | 1.9.0 (marketplace manifest, 2026-09-15) | CC-BY-SA-4.0 | [LICENSE](https://github.com/trailofbits/skills/blob/main/LICENSE) · [plugin](https://github.com/trailofbits/skills/tree/main/plugins/mutation-testing) | **Low while used, not adapted** — the skill is a router over `mewt`/`muton`, so the value and the risk both sit in the engine, not the prose |
+| review-walkthrough (marketplace `trailofbits`) | patch, remediate-finding — optional aid for the human-review step; renders a branch diff as a standalone HTML walkthrough | 1.2.2 installed 2026-09-16 (sha a6d1b234198d) | CC-BY-SA-4.0 | [LICENSE](https://github.com/trailofbits/skills/blob/main/LICENSE) · [plugin](https://github.com/trailofbits/skills/tree/main/plugins/review-walkthrough) | **Low while used, not adapted** — invoking it creates no obligation; it reads a git range and writes its own HTML, consuming no harness artifact and writing none |
+| mutation-testing (marketplace `trailofbits`) | *no skill consumes it* — operator-facing aid for configuring a campaign and reading survivors interactively. The automated lane depends on the `mewt` binary, not on this plugin | 1.9.1 installed 2026-09-16 (sha a6d1b234198d) | CC-BY-SA-4.0 | [LICENSE](https://github.com/trailofbits/skills/blob/main/LICENSE) · [plugin](https://github.com/trailofbits/skills/tree/main/plugins/mutation-testing) | **Low while used, not adapted** — the skill is a router over `mewt`/`muton`, so the value and the risk both sit in the engine, not the prose |
+
+**Observed drift, 2026-09-16.** Both plugins moved within a day of intake
+(1.2.1 -> 1.2.2, 1.9.0 -> 1.9.1). That is the moving-target problem this
+section describes, caught by the watcher rather than by chance, and the reason
+the versions above are recorded as *installed* with a commit sha rather than
+as a pin.
 
 **Freshness.** Plugins have no binary and no `--version`, so
 `config/external-tools.yaml` cannot describe them. The roster at
@@ -162,9 +168,16 @@ version — upstream can change a skill's behaviour *and* its licence terms
 between releases, so a `stale` row means re-read this table, not just
 `/plugin update`.
 
-**`mutation-testing` is wired into `remediate-finding` Phase 4b.** The
-integration plan originally proposed `patch`'s regression step, which the code
-does not permit: `patch`'s static mode cannot execute target code (its own
+**What actually depends on what.** `remediate-finding` Phase 4b
+(`run_mutation.sh`) invokes the **`mewt` binary** directly; it does not call
+the `mutation-testing` plugin, which ships prose rather than code. So the
+automated lane's hard dependency is the `mewt` row under CLI tools, and the
+plugin is an operator-facing aid — worth having for interactive campaign
+setup and for reading survivors, but nothing breaks without it. Its roster
+`consumers` is empty on purpose.
+
+The lane lives in `remediate-finding` because the integration plan's original
+target, `patch`'s regression step, is not permitted by the code: `patch`'s static mode cannot execute target code (its own
 guidance redirects build/test-verified work here) and its execution-verified
 mode delegates wholly to the C/C++ ASAN pipeline ladder. `remediate-finding`
 runs a repo's own build/test suite, so it is the only existing home.
