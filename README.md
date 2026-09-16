@@ -60,7 +60,7 @@ This harness is primarily used as an end-to-end workflow to index, scan, validat
  (inputs)                                    (analysis-results)    │   (progress-tracker → Drive, Slack, Jira)
                                                                    ├─▶ ⑤ Live validation  (validate-* / deploy-operator)
                                                                    ├─▶ ⑥ Fuzzing          (create-fuzzing)
-                                                                   └─▶ ⑦ Remediation      (remediate-finding / patch / verify)
+                                                                   └─▶ ⑦ Remediation      (remediate-finding / patch / property-test / verify)
 
   Stages ③–⑦ feed the append-only disposition ledger (track-findings), gated by human countersign;
   follow-up scans (vuln-scan, verify-remediation regressions, dependency-watch) enter it directly.
@@ -97,7 +97,7 @@ Two ways to run the engine, each with its own guide:
 | [docs/tooling-and-structure-files.md](docs/tooling-and-structure-files.md) | **Tooling and structure files** — every schema from `traust-contracts`, the packaged CLIs and key scripts, and what each is for |
 | [docs/language-support.md](docs/language-support.md) | **Language support matrix** — the language-agnostic agentic core vs per-language deterministic depth (rule packs, CVE reachability engines and their soundness, fuzzers, manifests, crypto census), current gaps, and the pattern for adding a language |
 | [docs/external-dependencies.md](docs/external-dependencies.md) | **Every external requirement** — CLI tools, Python libraries, MCP servers, data feeds, and framework content licenses, each with verified license + citation, plus the commercialization risk assessment (CIS flagged; PEACH resolved by the v0.54.2 original-text rewrite) |
-| [docs/skills.md](docs/skills.md) | Detailed reference for all 51 skills |
+| [docs/skills.md](docs/skills.md) | Detailed reference for all 52 skills |
 | [docs/validation-process.md](docs/validation-process.md) | **How live validation reaches a trustworthy verdict** — the three-purpose mission, the fail-closed gate stack (attestation → positive controls → differential probing → soundness → ledger discipline), and artifact flow |
 | [docs/model-routing.md](docs/model-routing.md) | **Model routing** — the model registry, tier classes and role floors, the A12 no-hardcoded-model rule, escalation stamping, the spend-declaration command |
 | [docs/components.md](docs/components.md) | **The five-component stack** — what `traust-engine` / `traust-ledger` / `traust-contracts` / `traust-sdk` each own, which repo to change for a given fix, git-tag pinning and its "conflicting URLs" failure mode, and the bottom-up release order |

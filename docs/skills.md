@@ -54,6 +54,7 @@ field on every skill.
 | [create-fuzzing](#create-fuzzing) | ⑥ Fuzzing | `primary` | `/create-fuzzing` |
 | [fleet-fix](#fleet-fix) | ⑦ Remediation | `primary` | `/fleet-fix` |
 | [patch](#patch) | ⑦ Remediation | `primary` | `/patch` |
+| [property-test](#property-test) | ⑦ Remediation | `primary` | `/property-test` |
 | [remediate-finding](#remediate-finding) | ⑦ Remediation | `primary` | `/remediate-finding` |
 | [verify-remediation](#verify-remediation) | ⑧ Verification | `primary` | `/verify-remediation` |
 | [generate-team-report](#generate-team-report) | ⑨ Delivery | `secondary` | `/generate-team-report` |
@@ -321,6 +322,16 @@ Generate candidate fixes for verified security findings. Consumes <repo>-triage.
 - **Invoke:** `/patch` — arguments: `<findings-path> [--repo PATH] [--top N] [--id fNNN] [--model M] [--fresh]`
 - **Skill:** [harnessing/7-remediate/patch/SKILL.md](../harnessing/7-remediate/patch/SKILL.md)
 - **Produces / consumes:** [Integrations](../harnessing/7-remediate/patch/SKILL.md#integrations)
+
+## property-test
+
+Use when a fix has been written for a finding whose sink has an algebraic shape — a codec, parser, normaliser, comparator, validator, or bounds check — and one example-based regression test is too weak to guard it. Authors a property test (Python/Hypothesis first) that asserts a rule over the input domain rather than one point, and can run it against the unpatched and patched revisions to emit typed `property` evidence. Explicitly answers "an example test is the right answer here" when the sink has no algebraic shape.
+
+- **Stage:** ⑦ Remediation
+- **Tier:** `primary`
+- **Invoke:** `/property-test`
+- **Skill:** [harnessing/7-remediate/property-test/SKILL.md](../harnessing/7-remediate/property-test/SKILL.md)
+- **Produces / consumes:** [Integrations](../harnessing/7-remediate/property-test/SKILL.md#integrations)
 
 ## remediate-finding
 

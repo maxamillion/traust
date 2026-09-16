@@ -32,9 +32,12 @@ allowed-tools:
   - Bash(bash *run_one.sh:*)
   - Bash(bash *ensure_fork.sh:*)
   - Bash(bash *run_checks.sh:*)
+  - Bash(bash *run_mutation.sh:*)
+  - Bash(bash *run_property.sh:*)
   - Bash(bash *finish_batch.sh:*)
   - Bash(bash *run_batch.sh:*)
   - Bash(python3 *harnessing/7-remediate/remediate-finding/scripts/emit_remediation_report.py:*)
+  - Bash(python3 *harnessing/7-remediate/remediate-finding/scripts/mutation_evidence.py:*)
   - Bash(python3 *harnessing/7-remediate/remediate-finding/scripts/update_remediation_progress.py:*)
   - Bash(python3 *harnessing/7-remediate/remediate-finding/scripts/next_pending_remediation.py:*)
   - Bash(python3 *harnessing/7-remediate/remediate-finding/scripts/build_remediation_manifest.py:*)
@@ -285,6 +288,34 @@ inside the mount, digest-pinned image. There is **no native fallback** — Phase
 4 already records that PATH shims are not a boundary, and executing target
 code N times outside one would be a posture regression. No podman, no mutation
 evidence.
+
+---
+
+## Phase 4c — Property evidence (optional, Python)
+
+Where Phase 4b asks "would the tests notice if this code changed", this asks
+the sharper question: **would the property have failed before the fix?** A
+property that fails on the unpatched revision and passes on the patched one
+witnesses the finding and now guards it — the strongest evidence available
+outside the `vuln-pipeline` ladder.
+
+Use it when the patched sink has an algebraic shape — codec, parser,
+normaliser, comparator, validator, bounds check. `/property-test` decides that
+and authors the test; it also answers "an example test is the right answer
+here", which is a valid result.
+
+```bash
+bash harnessing/7-remediate/property-test/run_property.sh \
+  <worktree> <audited_commit> <test-path> <out> \
+  > <out>/property-evidence.json
+```
+
+Pass both evidence files to Phase 5:
+`--evidence <out>/mutation-evidence.json --evidence <out>/property-evidence.json`.
+
+Complements Phase 4b rather than replacing it: mewt covers Go and no Python,
+Hypothesis covers Python. Between them the two largest slices of the portfolio
+have one form of guard each — neither is portfolio-wide assurance.
 
 ---
 

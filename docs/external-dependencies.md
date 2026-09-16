@@ -97,8 +97,18 @@ tools). Pinned versions for the scanner binaries live in
 | `aws` (CLI v2) | compliance-check `collect_cloud_inventory.py` (declared cloud inventory export) | Apache-2.0 | [LICENSE](https://github.com/aws/aws-cli/blob/v2/LICENSE.txt) — AWS *service* use is governed separately by AWS service terms |
 | `gcloud` (Google Cloud CLI) | pqc-readiness `build_xcrypto_tracker.py --push-sheet` only — mints a short-lived bearer from the operator's own login; never required for the CSV/md outputs | Proprietary (Google Cloud SDK ToS; freely downloadable, not OSS) | [terms](https://cloud.google.com/terms/service-terms) — invoked, never redistributed |
 | `gws` (Google Workspace CLI) | reassign-findings-owners (document-share permissions, ownership tracker) | Apache-2.0 | [LICENSE](https://github.com/googleworkspace/cli/blob/main/LICENSE) — README notes it is "not an officially supported Google product" |
+| `hypothesis` (+ pinned closure: pytest, pluggy, iniconfig, packaging, pygments, sortedcontainers) | property-test Step 3 (`run_property.sh`) — installed into the throwaway container that runs the differential, never into the harness venv or the target's manifest | **MPL-2.0** (PyPI packaging metadata `license_expression`) | [PyPI](https://pypi.org/project/hypothesis/) · [LICENSE.txt](https://github.com/HypothesisWorks/hypothesis/blob/master/hypothesis-python/LICENSE.txt) — weak copyleft, file-scoped; invoked unmodified as a test dependency, never vendored or redistributed |
 | `mewt` | mutation-testing (opt-in; see **Agent skills (runtime plugins)**) — runs a target's own test suite against generated mutants | **AGPL-3.0** | [LICENSE](https://github.com/trailofbits/mewt/blob/main/LICENSE) · [Cargo.toml](https://github.com/trailofbits/mewt/blob/main/Cargo.toml) — subprocess CLI, never linked or redistributed; see the AGPL note below |
 | `wasm-tools` / `wasmtime` / `wasmedge` | validate-findings WASM adapter | Apache-2.0 WITH LLVM-exception (OR MIT) / same / Apache-2.0 | [wasm-tools](https://github.com/bytecodealliance/wasm-tools/blob/main/LICENSE-Apache-2.0_WITH_LLVM-exception) · [wasmtime](https://github.com/bytecodealliance/wasmtime/blob/main/LICENSE) · [wasmedge](https://github.com/WasmEdge/WasmEdge/blob/master/LICENSE) |
+
+**Why `hypothesis` sits in this table and not under Python libraries.** It is
+never imported by the harness. `run_property.sh` installs the pinned closure
+into a disposable container alongside a copy of the target, so it is a
+dependency *of the differential run*, not of this package — the same
+relationship the CLI tools above have. The whole closure is pinned rather than
+resolved: an earlier version used `--no-deps` with a guessed list, missed
+`pluggy`, and pytest could not import itself, which the evidence layer read as
+a failing property until a precondition check was added.
 
 **AGPL-3.0 and `mewt` (§13).** The usage taxonomy at the top of this document
 settles the ordinary case: a subprocess CLI invoking an unmodified binary

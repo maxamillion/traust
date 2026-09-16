@@ -65,12 +65,25 @@ in_container() {
   # possible (go -buildvcs etc.); writes fail loudly.
 }
 
+egress_netmode() {
+  # podman 5 removed slirp4netns in favour of pasta. Picking the wrong one is
+  # not a loud failure: the prefetch below is `|| true`, so egress dies
+  # silently and the offline test run then fails to resolve dependencies,
+  # which reads as a genuine test failure. Probe instead of assuming.
+  if [[ -n "${REMEDIATION_EGRESS_NET:-}" ]]; then printf '%s' "$REMEDIATION_EGRESS_NET"; return; fi
+  if [[ -n "$(podman info --format '{{.Host.Pasta.Executable}}' 2>/dev/null)" ]]; then
+    printf 'pasta'
+  else
+    printf 'slirp4netns'
+  fi
+}
+
 prefetch_deps() {
   # networked but script-less dependency fetch; tests then run offline
   [[ -z "$CONTAINER_IMG" ]] && return 0
-  if   [[ -f "$WORK/go.mod" ]];       then in_container slirp4netns "go mod download" || true
-  elif [[ -f "$WORK/package.json" ]]; then in_container slirp4netns "npm ci --ignore-scripts || npm install --ignore-scripts" || true
-  elif [[ -f "$WORK/Cargo.toml" ]];   then in_container slirp4netns "cargo fetch" || true
+  if   [[ -f "$WORK/go.mod" ]];       then in_container "$(egress_netmode)" "go mod download" || true
+  elif [[ -f "$WORK/package.json" ]]; then in_container "$(egress_netmode)" "npm ci --ignore-scripts || npm install --ignore-scripts" || true
+  elif [[ -f "$WORK/Cargo.toml" ]];   then in_container "$(egress_netmode)" "cargo fetch" || true
   fi
 }
 
