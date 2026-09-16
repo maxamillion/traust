@@ -151,7 +151,7 @@ licenses table below, and rule 6 of the content guard).
 | Plugin | Used by | Version at intake | License | Evidence | Risk |
 |---|---|---|---|---|---|
 | review-walkthrough (marketplace `trailofbits`) | patch, remediate-finding — optional aid for the human-review step; renders a branch diff as a standalone HTML walkthrough | 1.2.1 (marketplace manifest, 2026-09-15) | CC-BY-SA-4.0 | [LICENSE](https://github.com/trailofbits/skills/blob/main/LICENSE) · [plugin](https://github.com/trailofbits/skills/tree/main/plugins/review-walkthrough) | **Low while used, not adapted** — invoking it creates no obligation; it reads a git range and writes its own HTML, consuming no harness artifact and writing none |
-| mutation-testing (marketplace `trailofbits`) | *adopted, not yet wired* — drives the `mewt` engine; see the AGPL and scope notes under CLI tools | 1.9.0 (marketplace manifest, 2026-09-15) | CC-BY-SA-4.0 | [LICENSE](https://github.com/trailofbits/skills/blob/main/LICENSE) · [plugin](https://github.com/trailofbits/skills/tree/main/plugins/mutation-testing) | **Low while used, not adapted** — the skill is a router over `mewt`/`muton`, so the value and the risk both sit in the engine, not the prose |
+| mutation-testing (marketplace `trailofbits`) | remediate-finding Phase 4b (`run_mutation.sh`) — drives the `mewt` engine; see the AGPL and scope notes under CLI tools | 1.9.0 (marketplace manifest, 2026-09-15) | CC-BY-SA-4.0 | [LICENSE](https://github.com/trailofbits/skills/blob/main/LICENSE) · [plugin](https://github.com/trailofbits/skills/tree/main/plugins/mutation-testing) | **Low while used, not adapted** — the skill is a router over `mewt`/`muton`, so the value and the risk both sit in the engine, not the prose |
 
 **Freshness.** Plugins have no binary and no `--version`, so
 `config/external-tools.yaml` cannot describe them. The roster at
@@ -162,17 +162,19 @@ version — upstream can change a skill's behaviour *and* its licence terms
 between releases, so a `stale` row means re-read this table, not just
 `/plugin update`.
 
-**`mutation-testing` is adopted but has no consumer yet.** The integration
-plan proposed running it behind `patch`'s regression step, which the code does
-not permit: `patch`'s static mode cannot execute target code at all (its own
-guidance redirects build/test-verified work to `remediate-finding`), and its
-execution-verified mode delegates wholesale to the C/C++ ASAN pipeline ladder.
-`remediate-finding` is the skill that runs a repo's own build/test suite, so it
-is the plausible home — but a surviving-mutant verdict is patch *evidence*, and
-what counts as patch evidence is an open schema decision (plan item 5a). Wiring
-it first would mean emitting into a contract that does not exist yet. The row
-above exists so the dependency is watched in the meantime; `consumers` in the
-roster is deliberately empty.
+**`mutation-testing` is wired into `remediate-finding` Phase 4b.** The
+integration plan originally proposed `patch`'s regression step, which the code
+does not permit: `patch`'s static mode cannot execute target code (its own
+guidance redirects build/test-verified work here) and its execution-verified
+mode delegates wholly to the C/C++ ASAN pipeline ladder. `remediate-finding`
+runs a repo's own build/test suite, so it is the only existing home.
+
+The lane emits a typed `evidence[]` item (`kind: mutation`) into the
+remediation report rather than prose, and runs inside Phase 4's container
+boundary with no native fallback — mewt executes target tests once per mutant,
+and Phase 4 already records that PATH shims are not a boundary. Absent mewt or
+podman it emits `not_attempted: <reason>`, which is a valid evidence item
+rather than a silent skip.
 
 ## Vulnerability-data feeds & web APIs
 

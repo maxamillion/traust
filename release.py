@@ -15,6 +15,7 @@ from pathlib import Path
 
 VERSION_FILE = "VERSION"
 PYPROJECT_FILE = "pyproject.toml"
+VERSION_ARGS_FILE = "version.args"
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 VERSION_LINE = re.compile(r"(?m)^version = \"[^\"]+\"")
 PYPROJECT_VERSION = re.compile(r"(?m)^version = \"([^\"]+)\"")
@@ -149,6 +150,14 @@ class Repo:
             raise ReleaseError(f"could not find version field in {PYPROJECT_FILE}")
         (self.path / VERSION_FILE).write_text(f"{version}\n")
         pj.write_text(VERSION_LINE.sub(f'version = "{version}"', text, count=1))
+        # version.args feeds the container build-args param, and
+        # `check docs-consistency` requires it to equal VERSION. Bumping
+        # without it left every release failing that gate between the bump and
+        # a manual follow-up edit. Conditional: repos without the file are
+        # unaffected.
+        va = self.path / VERSION_ARGS_FILE
+        if va.is_file():
+            va.write_text(f"VERSION={version}\n")
 
     def tag_name(self, version: str | None = None) -> str:
         return f"v{version or self.version()}"

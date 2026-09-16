@@ -568,7 +568,7 @@ patch.
 | `/patch` **execution-verified mode** (`vuln-pipeline` input) | the build → reproduce → regress → re-attack ladder with executable oracles; `verified: ladder_passed` / `ladder_failed` | behavioural: the original failure is observed before and not after |
 | `/patch` **static mode** (audit/triage/vuln-scan input) | `fact_differential: cleared` — the backing scanner, re-run on a scratch worktree with the diff applied, no longer fires | **pattern-level only** |
 | `/patch` static mode, finding **not** scanner-backed | `fact_differential: not-applicable: <reason>` | none; the reviewer verdict is the only signal |
-| `/remediate-finding` | the target repo's own build/test suite, run in containment | the project's suite, which was not written for this bug |
+| `/remediate-finding` | the target repo's own build/test suite, run in containment; optionally a typed `evidence[]` item per kind (`mutation` today — Phase 4b, Go only) | the project's suite, which was not written for this bug. A `mutation` item raises the ceiling only for the package it ran on: `proves` means the suite detects changes to that code, and `fails_to_prove` means the regression test asserts nothing about them — neither says the fix is correct |
 | `/verify-remediation` | a targeted re-audit against the patched code, same frameworks as the original audit | analysis, not execution — it never compares a baseline revision against a patched one |
 
 Three consequences worth keeping in view:

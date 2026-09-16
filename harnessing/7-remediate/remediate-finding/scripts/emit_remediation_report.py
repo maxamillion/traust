@@ -203,6 +203,23 @@ def derive_status(checks: list[dict]) -> str:
     return "checks_passed"
 
 
+def load_evidence(paths):
+    """Typed patch evidence from --evidence files, in the order given.
+
+    Accepts one item per file or an array per file. Deliberately does not
+    validate or normalise: `reporting validate` checks the report against the
+    schema immediately afterwards, and a second opinion here would only drift
+    from it.
+    """
+    if not paths:
+        return []
+    items = []
+    for p in paths:
+        doc = json.loads(Path(p).read_text(encoding="utf-8"))
+        items.extend(doc if isinstance(doc, list) else [doc])
+    return items
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     add_config_home_arg(ap)
@@ -215,6 +232,17 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--behaviour", default="none")
     ap.add_argument("--residual", default="")
     ap.add_argument("--tests-added", default="")
+    ap.add_argument(
+        "--evidence",
+        type=Path,
+        action="append",
+        default=None,
+        help="path to a JSON file holding one patch_evidence item, or an array of "
+        "them (repeatable). Typed base-versus-patch evidence; see "
+        "remediation.schema.json#/$defs/patch_evidence. Items are passed through "
+        "verbatim — the schema, not this script, decides whether a claim of "
+        "proof carried both observations.",
+    )
     ap.add_argument("--status")
     ap.add_argument("--out", type=Path)
     args = ap.parse_args(argv)
@@ -295,6 +323,10 @@ def main(argv: list[str]) -> int:
             "ready_for_review": status in ("checks_passed", "revalidated_fixed", "pr_opened"),
         },
     }
+
+    evidence = load_evidence(args.evidence)
+    if evidence:
+        report["evidence"] = evidence
 
     out_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(str(out_path.relative_to(workspace)))

@@ -219,6 +219,49 @@ run it now so the verification pass confirms rather than discovers.
 
 ---
 
+## Phase 4b — Mutation evidence (optional, Go)
+
+A regression test that passes proves the test *runs*. It does not prove the
+test would *fail* if the fix were reverted — and a test that asserts nothing
+is the failure mode that makes a green suite misleading. Mutation testing
+answers the second question directly: a mutant that survives on the line the
+patch touched means the suite does not detect that change.
+
+```bash
+bash harnessing/7-remediate/remediate-finding/run_mutation.sh \
+  <worktree> <package-path-the-patch-touched> <out> > <out>/mutation-evidence.json
+```
+
+Pass the *package the patch touched*, not the repository root: a whole-repo
+campaign costs a full test run per mutant and answers a question nobody asked.
+
+**Reading the result.** The script emits one `patch_evidence` item:
+
+| `outcome` | Meaning |
+|---|---|
+| `proves` | every mutant was killed — the tests detect changes to this code |
+| `fails_to_prove` | at least one mutant survived; the regression test asserts nothing about that change. **Not** evidence the fix is wrong — evidence it is unguarded. Strengthen the test and re-run |
+| `not_attempted: <reason>` | mewt absent, podman absent, not a Go module, or mewt produced no parseable counts |
+
+`not_attempted` is a first-class result, not a failure: an honest "no evidence"
+beats a fabricated verdict, and the schema refuses a claim of proof that lacks
+both observations anyway.
+
+**Scope, stated plainly.** Go only here. mewt supports C++, DAML, Go, JS/TS,
+Rust, Solidity and Move but **not Python**, which is a large slice of this
+portfolio — so mutation results are never portfolio-wide assurance, and no
+dashboard should imply they are.
+
+**Containment (S10).** mewt runs the target's own test suite once per mutant,
+so the campaign inherits Phase 4's boundary exactly: rootless, cap-dropped,
+`no-new-privileges`, credential-free, `--network=none`, `.git` read-only
+inside the mount, digest-pinned image. There is **no native fallback** — Phase
+4 already records that PATH shims are not a boundary, and executing target
+code N times outside one would be a posture regression. No podman, no mutation
+evidence.
+
+---
+
 ## Phase 5 — Report
 
 ```bash
@@ -230,7 +273,8 @@ python3 harnessing/7-remediate/remediate-finding/scripts/emit_remediation_report
   --rationale "<why this closes the root cause — reference the triage rationale>" \
   --behaviour "<user-visible change or 'none'>" \
   --residual "<anything deliberately not fixed>" \
-  --tests-added "<pkg/foo_test.go:TestX>"
+  --tests-added "<pkg/foo_test.go:TestX>" \
+  [--evidence <out>/mutation-evidence.json]
 
 python3 -m traust.cli reporting validate \
   --schema contracts/schemas/remediation.schema.json \
