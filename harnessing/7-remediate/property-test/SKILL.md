@@ -154,10 +154,15 @@ Evidence is emitted as a typed `patch_evidence` item (`kind: property`) for
 and `docs/disposition-ledger.md` §8a for what each kind may conclude.
 
 **Containment (S9/S10).** The differential executes the target's test suite,
-which is hostile-input execution: rootless podman, cap-dropped,
-`no-new-privileges`, credential-free, `--network=none` for both test runs,
-digest-pinned image, and disposable copies so neither run can touch the
-worktree the patch diff comes from. There is no native fallback.
+which is hostile-input execution: cap-dropped, `no-new-privileges`,
+credential-free, `--network=none` for both test runs, digest-pinned image, and
+disposable copies so neither run can touch the worktree the patch diff comes
+from.
+
+Two boundaries are accepted and there is **no unattested fallback**: nested
+podman, or a platform-attested sandbox declared via
+`TRAUST_SANDBOXED_RUNNER` (see `docs/external-dependencies.md`). With neither,
+the lane reports `not_attempted`. The boundary is recorded in the evidence.
 
 ## Integrations
 

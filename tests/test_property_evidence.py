@@ -92,3 +92,17 @@ def test_a_proof_claim_always_carries_both_observations():
     item = _item(1, 0)
     assert item["base_observation"].startswith("on the unpatched revision")
     assert item["patched_observation"].startswith("on the patched revision")
+
+
+def test_boundary_is_recorded_in_the_command():
+    for boundary in ("podman", "attested:konflux-job"):
+        item = pe.build_item(
+            test_path="t.py", base_ref="r", base_rc=1, patched_rc=0,
+            tool_version="hypothesis 6.168.0", base_log="b", patched_log="p",
+            boundary=boundary,
+        )
+        assert f"[boundary: {boundary}]" in item["command"]
+
+
+def test_boundary_is_optional():
+    assert "[boundary:" not in _item(1, 0)["command"]

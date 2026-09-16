@@ -69,11 +69,18 @@ def build_item(
     tool_version: str,
     base_log: str,
     patched_log: str,
+    boundary: str = "",
 ) -> dict:
+    # Record which boundary produced the verdict: nested podman and a
+    # platform-attested sandbox are not equally strong, and a reader of the
+    # artifact cannot otherwise tell them apart.
+    cmd = f"pytest {test_path}"
+    if boundary:
+        cmd += f"  [boundary: {boundary}]"
     item = {
         "kind": KIND,
         "tool": tool_version or "hypothesis",
-        "command": f"pytest {test_path}",
+        "command": cmd,
         "log_path": patched_log,
         "deterministic_steps": "ran",
     }
@@ -129,6 +136,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--tool-version", default="")
     ap.add_argument("--base-log", default="")
     ap.add_argument("--patched-log", default="")
+    ap.add_argument(
+        "--boundary",
+        default="",
+        help="execution boundary the differential ran under "
+        "(podman | attested:<label>), recorded in the evidence",
+    )
     args = ap.parse_args(argv)
 
     print(
@@ -141,6 +154,7 @@ def main(argv: list[str] | None = None) -> int:
                 tool_version=args.tool_version,
                 base_log=args.base_log,
                 patched_log=args.patched_log,
+                boundary=args.boundary,
             )
         )
     )

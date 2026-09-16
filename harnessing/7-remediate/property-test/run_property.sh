@@ -13,8 +13,9 @@
 # rootless, cap-dropped, no-new-privileges, credential-free, digest-pinned
 # image, --network=none for the test runs. Dependencies are fetched in a
 # separate networked, script-less step (pip --no-deps on a pinned version,
-# rule S7) exactly as run_checks.sh prefetches. No native fallback: without
-# podman there is no boundary and therefore no evidence.
+# rule S7) exactly as run_checks.sh prefetches. No UNATTESTED fallback:
+# without podman or a declared platform sandbox there is no boundary and
+# therefore no evidence.
 #
 # Neither run touches the caller's worktree. Both are disposable copies —
 # the patched one as-is, the base one reset to <base-ref> with the property
@@ -67,7 +68,35 @@ INNER
   exit 0
 }
 
-command -v podman >/dev/null 2>&1 || emit_not_attempted "podman unavailable; the property differential is not run outside the container boundary"
+# --- execution boundary ------------------------------------------------------
+# Both runs execute the target's suite, so one of two boundaries is required.
+# See run_mutation.sh for the full rationale; the contract is identical:
+#
+#   podman   — nested container, the workstation case, default when present.
+#   attested — already inside a platform-supplied sandbox whose image carries
+#              the toolchain, declared via TRAUST_SANDBOXED_RUNNER.
+#
+# The env var is a declaration of deployment fact, NOT a security control. It
+# exists so podman's absence is never read as permission to run target code in
+# the open. Neither boundary => `not_attempted`, never a silent downgrade.
+resolve_boundary() {
+  # `command -v podman` is the WRONG probe: it finds the client binary, which
+  # is present on a Mac whose VM is stopped and in images that ship the CLI
+  # with no working runtime. Every run then fails with exit 125 — the exact
+  # failure this resolver exists to avoid. `podman info` round-trips to the
+  # runtime, so it answers "can I actually run a container", and it is cheap
+  # (no image pull).
+  if command -v podman >/dev/null 2>&1 && podman info >/dev/null 2>&1; then
+    printf 'podman'
+  elif [[ -n "${TRAUST_SANDBOXED_RUNNER:-}" ]]; then
+    printf 'attested:%s' "$TRAUST_SANDBOXED_RUNNER"
+  else
+    printf ''
+  fi
+}
+
+BOUNDARY="$(resolve_boundary)"
+[[ -z "$BOUNDARY" ]] && emit_not_attempted "no execution boundary: podman is unavailable and TRAUST_SANDBOXED_RUNNER is unset, so the differential would run target code unsandboxed"
 [[ -f "$WORK/pyproject.toml" || -f "$WORK/setup.py" || -f "$WORK/setup.cfg" ]] \
   || emit_not_attempted "not a Python project; Go (rapid) and TS (fast-check) are not wired yet"
 [[ -f "$WORK/$TEST_PATH" ]] || emit_not_attempted "property test not found at $TEST_PATH"
@@ -109,25 +138,34 @@ egress_netmode() {
 # being importable from the rootdir, which holds for a flat layout and fails
 # for a src/ layout; adding both covers the common cases without a network
 # install of the project.
-PYPATH="/work/.prop-deps:/work:/work/src"
+PYPATH="/work/.prop-deps:/work:/work/src"   # /work rewritten on the attested path
 
-in_container() {
-  # in_container <netmode> <sandbox> <cmd...>
+in_boundary() {
+  # in_boundary <netmode> <sandbox> <cmd...> — netmode applies to the podman
+  # path; on the attested path the surrounding job owns the network policy.
   local netmode="$1" sandbox="$2"; shift 2
-  podman run --rm --network="$netmode" \
-    --security-opt=no-new-privileges --cap-drop=ALL \
-    --user "$(id -u):$(id -g)" --userns=keep-id \
-    --tmpfs /home/runner:rw,mode=700 -e HOME=/home/runner \
-    -e PYTHONDONTWRITEBYTECODE=1 \
-    -v "$sandbox":/work:Z \
-    -w /work "$IMG_PY" bash -c "$*"
+  if [[ "$BOUNDARY" == podman ]]; then
+    podman run --rm --network="$netmode" \
+      --security-opt=no-new-privileges --cap-drop=ALL \
+      --user "$(id -u):$(id -g)" --userns=keep-id \
+      --tmpfs /home/runner:rw,mode=700 -e HOME=/home/runner \
+      -e PYTHONDONTWRITEBYTECODE=1 \
+      -v "$sandbox":/work:Z \
+      -w /work "$IMG_PY" bash -c "$*"
+  else
+    # /work is the container path baked into the commands; on the attested
+    # path the sandbox IS the working directory, so rewrite it.
+    local cmd="${*//\/work/$sandbox}"
+    ( cd "$sandbox" && env -i PATH="$PATH" HOME="${HOME:-/tmp}" \
+        PYTHONDONTWRITEBYTECODE=1 bash -c "$cmd" )
+  fi
 }
 
 # Networked, script-less dependency step; the test runs offline afterwards.
 # --no-deps and an exact pin keep this from becoming an open install.
 EGRESS="$(egress_netmode)"
 for sb in "$SB_PATCHED" "$SB_BASE"; do
-  in_container "$EGRESS" "$sb" \
+  in_boundary "$EGRESS" "$sb" \
     "python3 -m pip install --quiet --no-deps --target /work/.prop-deps ${PROP_DEPS[*]}" \
     >>"$OUT/property-deps.log" 2>&1 || true
 done
@@ -138,20 +176,20 @@ done
 # "the property found a counterexample" — which is exactly how a broken
 # sandbox once produced a confident `fails_to_prove`.
 for sb in "$SB_PATCHED" "$SB_BASE"; do
-  in_container none "$sb" \
+  in_boundary none "$sb" \
     "PYTHONPATH=$PYPATH python3 -m pytest --version >/dev/null 2>&1 && \
      PYTHONPATH=$PYPATH python3 -c 'import hypothesis' >/dev/null 2>&1" \
     >>"$OUT/property-deps.log" 2>&1 \
     || emit_not_attempted "pytest+hypothesis could not run in the sandbox (see $OUT/property-deps.log)"
 done
 
-HYPO_VERSION="$(in_container none "$SB_PATCHED" \
+HYPO_VERSION="$(in_boundary none "$SB_PATCHED" \
   "PYTHONPATH=$PYPATH python3 -c 'import hypothesis; print(hypothesis.__version__)'" 2>/dev/null | tr -d '\r')"
 
 run_one() {
   # run_one <sandbox> <logfile> -> pytest exit code
   local sandbox="$1" log="$2"
-  in_container none "$sandbox" \
+  in_boundary none "$sandbox" \
     "PYTHONPATH=$PYPATH timeout --signal=TERM --kill-after=30 $TIMEOUT_S \
        python3 -m pytest -p no:cacheprovider -q '$TEST_PATH'" >"$log" 2>&1
   echo $?
@@ -166,4 +204,5 @@ python3 "$SCRIPTS/property_evidence.py" \
   --test-path "$TEST_PATH" --base-ref "$BASE_REF" \
   --base-rc "$BASE_RC" --patched-rc "$PATCHED_RC" \
   --tool-version "${HYPO_VERSION:+hypothesis $HYPO_VERSION}" \
-  --base-log "$BASE_LOG" --patched-log "$PATCHED_LOG"
+  --base-log "$BASE_LOG" --patched-log "$PATCHED_LOG" \
+  --boundary "$BOUNDARY"

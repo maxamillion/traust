@@ -2,6 +2,32 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.3]
+
+- **The evidence lanes no longer hard-require podman.** `run_mutation.sh` and
+  `run_property.sh` accept either nested podman or a platform-attested
+  sandbox, declared by the orchestrator as
+  `TRAUST_SANDBOXED_RUNNER=<runner-label>`. On a central runner whose image
+  carries the toolchain but cannot nest containers, both lanes would otherwise
+  have returned `not_attempted` on every run, permanently.
+
+  Still no *unattested* fallback: with neither boundary the lanes emit
+  `not_attempted` rather than running target code in the open. The env var is
+  a declaration of deployment fact, not a security control — its only job is
+  to stop podman's absence from being read as permission.
+
+- **Boundary detection uses `podman info`, not `command -v podman`.** The
+  client binary is present on a host whose VM is stopped and in images that
+  ship the CLI with no runtime; choosing podman there failed every run with
+  exit 125 — the exact failure the change was meant to prevent. Caught by
+  running it with the VM deliberately stopped.
+
+- The resolved boundary is recorded in each evidence item's `command`, since a
+  verdict from nested podman and one from an attested sandbox are not equally
+  strong. `docs/external-dependencies.md` gains the boundary contract and
+  names the new podman consumers; `docs/continuous-operations.md` gains the
+  orchestrator prerequisite row.
+
 ## [0.2.2]
 
 - Pin traust-contracts v0.4.0 / traust-engine v0.2.3 / traust-ledger v0.2.2,

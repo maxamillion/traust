@@ -65,11 +65,18 @@ def build_item(
     tool_version: str,
     log_path: str,
     status_text: str | None,
+    boundary: str = "",
 ) -> dict:
+    # The boundary belongs in the artifact: a verdict produced under nested
+    # podman and one produced under a platform-attested sandbox are not
+    # equally strong, and a reader cannot otherwise tell them apart.
+    cmd = f'mewt run --test.cmd "go test ./..." {target}'
+    if boundary:
+        cmd += f"  [boundary: {boundary}]"
     item = {
         "kind": KIND,
         "tool": _tool_label(tool_version),
-        "command": f'mewt run --test.cmd "go test ./..." {target}',
+        "command": cmd,
         "log_path": log_path,
         "deterministic_steps": "ran",
     }
@@ -137,6 +144,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--target", required=True)
     ap.add_argument("--tool-version", default="")
     ap.add_argument("--status-json", required=True, help="output of `mewt status --format json`")
+    ap.add_argument(
+        "--boundary",
+        default="",
+        help="execution boundary the campaign ran under (podman | attested:<label>), "
+        "recorded in the evidence so a reader can weigh it",
+    )
     args = ap.parse_args(argv)
 
     try:
@@ -150,6 +163,7 @@ def main(argv: list[str] | None = None) -> int:
         tool_version=args.tool_version,
         log_path=args.log,
         status_text=status_text,
+        boundary=args.boundary,
     )
     print(json.dumps(item))
     return 0

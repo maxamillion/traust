@@ -9,13 +9,15 @@
 # Containment (S10). mewt runs the target's own test suite once per mutant,
 # so it is hostile-input execution and inherits run_checks.sh's boundary
 # exactly: rootless, cap-dropped, no-new-privileges, credential-free,
-# --network=none, .git read-only inside the mount, digest-pinned image.
-# There is deliberately NO native fallback: run_checks.sh already records
-# that PATH shims are "not a boundary", and running a mutation campaign —
-# which executes target code N times instead of once — outside the boundary
-# would be a posture regression. No podman, no mutation evidence: the script
-# emits `not_attempted: <reason>` and exits 0, which is a valid, honest
-# evidence item rather than a silent skip.
+# --network=none, digest-pinned image, and a disposable copy rather than the
+# caller's worktree (so no .git of the real checkout is reachable at all).
+# There is deliberately NO UNATTESTED fallback: either podman provides the
+# boundary, or the orchestrator declares the surrounding job already is one
+# (TRAUST_SANDBOXED_RUNNER, see resolve_boundary). With neither, the script
+# emits `not_attempted: <reason>` and exits 0 — an honest evidence item rather
+# than a silent decision to run target code in the open. run_checks.sh already
+# records that PATH shims are "not a boundary", and a mutation campaign
+# executes target code N times instead of once.
 #
 # Scope: Go only. mewt supports C++, DAML, Go, JS/TS, Rust, Solidity and Move
 # but NOT Python, so mutation evidence is never portfolio-wide assurance.
@@ -63,9 +65,67 @@ PY
   exit 0
 }
 
+# --- execution boundary ------------------------------------------------------
+# This runs the target's own test suite, so it must execute inside SOME
+# boundary. Two are acceptable:
+#
+#   podman   — nested container, the workstation case. Strongest, and default
+#              whenever podman is present.
+#   attested — the process is ALREADY inside a credential-free, network-
+#              restricted sandbox supplied by the platform (a CI/Konflux job
+#              pod whose image carries the scanner binaries, per
+#              docs/continuous-operations.md). Declared by the orchestrator
+#              setting TRAUST_SANDBOXED_RUNNER to a short label naming it.
+#
+# TRAUST_SANDBOXED_RUNNER is a DECLARATION OF DEPLOYMENT FACT, not a security
+# control: anything that can set an env var can set it, and it buys nothing
+# against an attacker already executing here. Its only job is to stop the
+# ABSENCE of podman from being read as permission to run target code in the
+# open. With neither boundary there is no evidence — `not_attempted`, never a
+# silent downgrade.
+#
+# The resolved boundary is recorded in the emitted evidence so a reader can
+# always tell which one produced a verdict.
+resolve_boundary() {
+  # `command -v podman` is the WRONG probe: it finds the client binary, which
+  # is present on a Mac whose VM is stopped and in images that ship the CLI
+  # with no working runtime. Every run then fails with exit 125 — the exact
+  # failure this resolver exists to avoid. `podman info` round-trips to the
+  # runtime, so it answers "can I actually run a container", and it is cheap
+  # (no image pull).
+  if command -v podman >/dev/null 2>&1 && podman info >/dev/null 2>&1; then
+    printf 'podman'
+  elif [[ -n "${TRAUST_SANDBOXED_RUNNER:-}" ]]; then
+    printf 'attested:%s' "$TRAUST_SANDBOXED_RUNNER"
+  else
+    printf ''
+  fi
+}
+
+mewt_in_boundary() {
+  # mewt_in_boundary <cmd...> — run under the resolved boundary, always
+  # against the disposable copy, never the caller's worktree.
+  if [[ "$BOUNDARY" == podman ]]; then
+    podman run --rm --network=none \
+      --security-opt=no-new-privileges --cap-drop=ALL \
+      --user "$(id -u):$(id -g)" --userns=keep-id \
+      --tmpfs /home/runner:rw,mode=700 -e HOME=/home/runner \
+      -e GOFLAGS -e GOMEMLIMIT -e GOMAXPROCS -e GOPROXY=off \
+      -v "$SANDBOX":/work:Z \
+      -v "$MEWT":/usr/local/bin/mewt:ro,Z \
+      -w /work "$IMG_GO" "$@"
+  else
+    # The surrounding job IS the boundary. Still scrub the environment and
+    # deny module egress, so the attested path is not merely "run it raw".
+    ( cd "$SANDBOX" && env -i PATH="$PATH" HOME="${HOME:-/tmp}" \
+        GOFLAGS="${GOFLAGS:-}" GOPROXY=off "$@" )
+  fi
+}
+
 MEWT="$(command -v mewt 2>/dev/null)"
 [[ -z "$MEWT" ]] && emit_not_attempted "mewt is not installed on this host"
-command -v podman >/dev/null 2>&1 || emit_not_attempted "podman unavailable; a mutation campaign is not run outside the container boundary"
+BOUNDARY="$(resolve_boundary)"
+[[ -z "$BOUNDARY" ]] && emit_not_attempted "no execution boundary: podman is unavailable and TRAUST_SANDBOXED_RUNNER is unset, so the campaign would run target code unsandboxed"
 [[ -f "$WORK/go.mod" ]] || emit_not_attempted "not a Go module; mewt has no Python support and other languages are out of scope here"
 
 MEWT_VERSION="$("$MEWT" --version 2>/dev/null | head -1)"
@@ -82,15 +142,7 @@ cp -a "$WORK/." "$SANDBOX/" 2>/dev/null || emit_not_attempted "could not copy th
 # Go test command for the campaign; mewt auto-detects the language from the
 # target's extension and has NO --language flag on `run` (verified against
 # src/core/cli.rs RunArgs, mewt 4.x).
-podman run --rm --network=none \
-  --security-opt=no-new-privileges --cap-drop=ALL \
-  --user "$(id -u):$(id -g)" --userns=keep-id \
-  --tmpfs /home/runner:rw,mode=700 -e HOME=/home/runner \
-  -e GOFLAGS -e GOMEMLIMIT -e GOMAXPROCS -e GOPROXY=off \
-  -v "$SANDBOX":/work:Z \
-  -v "$MEWT":/usr/local/bin/mewt:ro,Z \
-  -w /work "$IMG_GO" \
-  timeout --signal=TERM --kill-after=30 "$TIMEOUT_S" \
+mewt_in_boundary timeout --signal=TERM --kill-after=30 "$TIMEOUT_S" \
   mewt run --test.cmd "go test ./..." "$TARGET" >"$LOG" 2>&1
 RC=$?
 
@@ -99,15 +151,9 @@ RC=$?
 # "Caught/Uncaught/Skipped", and an earlier version of this script guessed
 # "killed/survived" and would have returned no verdict on every real run.
 STATUS_JSON="$OUT/mutation-status.json"
-podman run --rm --network=none \
-  --security-opt=no-new-privileges --cap-drop=ALL \
-  --user "$(id -u):$(id -g)" --userns=keep-id \
-  --tmpfs /home/runner:rw,mode=700 -e HOME=/home/runner \
-  -v "$SANDBOX":/work:Z \
-  -v "$MEWT":/usr/local/bin/mewt:ro,Z \
-  -w /work "$IMG_GO" \
-  mewt status --format json >"$STATUS_JSON" 2>/dev/null || true
+mewt_in_boundary mewt status --format json >"$STATUS_JSON" 2>/dev/null || true
 
 python3 "$(dirname "$0")/scripts/mutation_evidence.py" \
   --log "$LOG" --rc "$RC" --target "$TARGET" \
-  --tool-version "$MEWT_VERSION" --status-json "$STATUS_JSON"
+  --tool-version "$MEWT_VERSION" --status-json "$STATUS_JSON" \
+  --boundary "$BOUNDARY"

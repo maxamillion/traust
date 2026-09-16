@@ -69,7 +69,7 @@ tools). Pinned versions for the scanner binaries live in
 | `pip-audit` | secure-code-audit optional Python-environment dependency check | Apache-2.0 | [LICENSE](https://github.com/pypa/pip-audit/blob/main/LICENSE) |
 | `cosign` | secure-container-audit (signature checks); **ledger Merkle-root signing** (`traust_ledger` keypair backend, offline bundle format — see [signing.md](signing.md)) | Apache-2.0 | [LICENSE](https://github.com/sigstore/cosign/blob/main/LICENSE) |
 | `skopeo` | inventory-repositories, secure-container-audit | Apache-2.0 | [LICENSE](https://github.com/containers/skopeo/blob/main/LICENSE) |
-| `podman` | inventory-repositories, validate-findings (container adapter), remediate-finding (sandboxed build/test leg) | Apache-2.0 | [LICENSE](https://github.com/containers/podman/blob/main/LICENSE) |
+| `podman` | inventory-repositories, validate-findings (container adapter), remediate-finding (sandboxed build/test leg, **and** the Phase 4b mutation campaign), property-test (the base-vs-patch differential) | Apache-2.0 | [LICENSE](https://github.com/containers/podman/blob/main/LICENSE) — for the three evidence lanes it is *one of two* acceptable boundaries; a platform-attested sandbox is the other (see the note below), so podman is not a hard requirement on an orchestrated runner |
 | `yara` | secure-container-audit (exported rootfs), secure-rpm-audit (prepared source tree) — known-malware-family pre-scan | BSD-3-Clause | [LICENSE](https://github.com/VirusTotal/yara/blob/master/COPYING) — engine only. **Rule packs license separately, see the frameworks table** |
 | `checkov` | cloud-config-audit (pinned version, subprocess only — never imported, never vendored; always `--skip-download`, never an API key; `secrets` framework skipped in favour of gitleaks) | Apache-2.0 | [LICENSE](https://github.com/bridgecrewio/checkov/blob/main/LICENSE) — the vendor's SaaS platform is opt-in via API key, which the harness never passes. Checkov's policies are its own Apache-licensed implementations that *map* to CIS and other frameworks — do not add CIS recommendation prose alongside them |
 | `bicep` | cloud-config-audit (bicep-transpile fallback, pinned, subprocess only, `bicep build --no-restore`: external registry modules are never fetched) | MIT | [LICENSE](https://github.com/Azure/bicep/blob/main/LICENSE) |
@@ -132,6 +132,31 @@ not an assumed capability.
 manifest doubles as the job-image install target, so adding an optional
 AGPL engine to the shipped roster would push it into every adopter's image.
 Adopters who install the plugin add their own row.
+
+**The execution boundary for evidence lanes, and why podman is not mandatory.**
+`run_checks.sh`, `run_mutation.sh` and `run_property.sh` all execute a target
+repository's own build/test code, which is hostile-input execution (rule S10).
+Two boundaries are accepted:
+
+1. **Nested podman** — the workstation case, and the default whenever a
+   *working* runtime is present.
+2. **A platform-attested sandbox** — the process is already inside a
+   credential-free, network-restricted job whose image carries the toolchain,
+   as `docs/continuous-operations.md` specifies for the orchestrator. The
+   orchestrator declares this by setting `TRAUST_SANDBOXED_RUNNER` to a short
+   label naming the runner.
+
+`TRAUST_SANDBOXED_RUNNER` is a declaration of deployment fact, **not** a
+security control — anything that can set an env var can set it. Its only job
+is to stop podman's *absence* from being read as permission to run target code
+in the open. With neither boundary the lanes emit `not_attempted` and produce
+no evidence; they never silently downgrade. The boundary that produced a
+verdict is recorded in the evidence item's `command` field, because a result
+from nested podman and one from an attested sandbox are not equally strong.
+
+Detection uses `podman info`, not `command -v podman`: the client binary is
+present on a host whose VM is stopped and in images that ship the CLI with no
+runtime, and choosing podman there fails every run with exit 125.
 
 Cluster-provisioning tools (managed-cloud CLIs, installers, deployment
 helpers) are **not** harness dependencies. Live validation needs a reachable

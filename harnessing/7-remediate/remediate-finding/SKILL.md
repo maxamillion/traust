@@ -282,12 +282,17 @@ portfolio — so mutation results are never portfolio-wide assurance, and no
 dashboard should imply they are.
 
 **Containment (S10).** mewt runs the target's own test suite once per mutant,
-so the campaign inherits Phase 4's boundary exactly: rootless, cap-dropped,
-`no-new-privileges`, credential-free, `--network=none`, `.git` read-only
-inside the mount, digest-pinned image. There is **no native fallback** — Phase
-4 already records that PATH shims are not a boundary, and executing target
-code N times outside one would be a posture regression. No podman, no mutation
-evidence.
+so the campaign inherits Phase 4's boundary: rootless, cap-dropped,
+`no-new-privileges`, credential-free, `--network=none`, digest-pinned image,
+and a disposable copy rather than your worktree.
+
+Two boundaries are accepted, and **no unattested fallback**: nested podman
+(default when a working runtime is present), or a platform-attested sandbox
+declared by the orchestrator via `TRAUST_SANDBOXED_RUNNER` — the case that
+matters on a central runner whose image carries the toolchain but cannot nest
+containers. With neither, the lane emits `not_attempted` rather than running
+target code in the open. Which boundary produced a verdict is recorded in the
+evidence item's `command`, because the two are not equally strong.
 
 ---
 

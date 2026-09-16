@@ -127,3 +127,20 @@ def test_no_source_targets_is_not_attempted():
 )
 def test_tool_label_is_not_double_prefixed(version, expected):
     assert me._tool_label(version) == expected
+
+
+def test_boundary_is_recorded_in_the_command():
+    """A verdict from nested podman and one from an attested sandbox are not
+    equally strong; the artifact has to say which produced it."""
+    for boundary in ("podman", "attested:konflux-job"):
+        item = me.build_item(
+            target="./pkg/x", rc=0, tool_version="mewt 4.0.0", log_path="l",
+            status_text=(FIXTURES / "status-all-caught.json").read_text(),
+            boundary=boundary,
+        )
+        assert f"[boundary: {boundary}]" in item["command"]
+
+
+def test_boundary_is_optional():
+    item = _item("status-all-caught.json", target="./pkg/calc/calc.go")
+    assert "[boundary:" not in item["command"]

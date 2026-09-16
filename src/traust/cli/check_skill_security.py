@@ -225,9 +225,11 @@ EXEMPTIONS: dict[tuple[str, str], str] = {
         "harnessing/remediate-finding/run_mutation.sh",
     ): "reviewed — same container boundary as run_checks.sh and strictly "
     "tighter: rootless podman, cap-drop, no-new-privileges, "
-    "--network=none for the whole campaign (not just the test phase), NO "
-    "native fallback at all, and the campaign runs on a disposable copy so "
-    "mutations cannot reach the worktree under review (ToB plan item 3)",
+    "--network=none for the whole campaign (not just the test phase), and a "
+    "disposable copy so mutations cannot reach the worktree under review. No "
+    "UNATTESTED fallback: the only alternative to podman is an orchestrator "
+    "declaring the job already is a sandbox (TRAUST_SANDBOXED_RUNNER), and "
+    "with neither the lane emits not_attempted (ToB plan item 3)",
     # --- S6 tmp-paths ---
     (
         "S6",
