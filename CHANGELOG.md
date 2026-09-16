@@ -2,6 +2,20 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.1]
+
+- Pin traust-contracts v0.3.0, traust-engine v0.2.2 and traust-ledger v0.2.1 —
+  the final hop of the train for the remediation `evidence[]` block. Until
+  this pin, `reporting/validate.py` rejected any report carrying it, because
+  the remediation schema is `additionalProperties: false`.
+
+  Smoke-tested rather than assumed: the same evidence-carrying report
+  validates with 0 errors against the newly pinned schema and is rejected
+  against v0.1.1 with *"Additional properties are not allowed ('evidence' was
+  unexpected)"*, and all eight enforcement cases behave — a `proves` claim
+  missing either observation is refused, `not_attempted` without a reason is
+  refused, and invented kinds/outcomes are refused.
+
 ## [0.1.1]
 
 ## Changes
