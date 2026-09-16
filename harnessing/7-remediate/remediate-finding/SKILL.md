@@ -251,9 +251,23 @@ stray database can never reach the artifact under review.
 
 | `outcome` | Meaning |
 |---|---|
-| `proves` | every mutant was killed — the tests detect changes to this code |
-| `fails_to_prove` | at least one mutant survived; the regression test asserts nothing about that change. **Not** evidence the fix is wrong — evidence it is unguarded. Strengthen the test and re-run |
-| `not_attempted: <reason>` | mewt absent, podman absent, not a Go module, or mewt produced no parseable counts |
+| `proves` | every generated mutant was exercised **and** caught |
+| `fails_to_prove` | a mutant went uncaught or timed out, **or** some were never exercised. **Not** evidence the fix is wrong — evidence it is unguarded. Strengthen the test and re-run |
+| `not_attempted: <reason>` | mewt absent, podman absent, not a Go module, campaign timed out, or no readable status json |
+
+Two details that decide the verdict, both learned from real campaigns:
+
+- **Unexercised mutants block a proof claim.** mewt skips less severe mutants
+  on a line whose more severe mutant escaped, so a campaign can finish with
+  zero uncaught and still leave many untested. That is a campaign that stopped
+  short, not proof.
+- **Mutants inside `_test.go` files are excluded from the claim.** A surviving
+  mutant there means the test's own assertions are dead — worth knowing, but a
+  different question from whether the suite detects changes to the patched
+  code. Their count is reported alongside.
+
+The verdict is read from `mewt status --format json`, a declared interface with
+per-target rows, never from the campaign banner.
 
 `not_attempted` is a first-class result, not a failure: an honest "no evidence"
 beats a fabricated verdict, and the schema refuses a claim of proof that lacks
