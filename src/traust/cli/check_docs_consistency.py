@@ -1055,6 +1055,88 @@ def cli_op_failures(repo: Path = REPO) -> list[str]:
     return failures
 
 
+
+# --- model-class index vs its sources -------------------------------------
+#
+# docs/model-classes.md indexes which tier class each skill runs at. Nothing in
+# the tree links a skill to a class mechanically (skill frontmatter carries
+# `harness.tier`, a different axis), so the index is derived from the two usage
+# tables. This check is what keeps it honest: the first draft of that page was
+# hand-written and misclassed nine skills while inventing six names.
+_MODEL_CLASS_DOC = "docs/model-classes.md"
+_MODEL_CLASS_SOURCES = ("docs/campaign-workflow.md", "docs/standalone-usage.md")
+
+
+def _class_rows(repo: Path, rel: str) -> dict[str, str]:
+    """skill -> tier class, from table rows shaped `| `skill` | ... | X-class |`."""
+    out: dict[str, str] = {}
+    path = repo / rel
+    if not path.is_file():
+        return out
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if not cells:
+            continue
+        m = re.match(r"`([a-z0-9-]+)`", cells[0])
+        cls = next((c for c in cells if c.endswith("-class")), None)
+        if m and cls:
+            out[m.group(1)] = cls
+    return out
+
+
+def _class_index(repo: Path) -> dict[str, str]:
+    """skill -> class, from model-classes.md's `### `<class>`` sections."""
+    doc = repo / _MODEL_CLASS_DOC
+    if not doc.is_file():
+        return {}
+    text = doc.read_text(encoding="utf-8")
+    out: dict[str, str] = {}
+    # Stop at the NEXT heading of any kind, not the next class heading: the
+    # page ends with prose sections ("Not classed…", "Making this mechanical")
+    # whose backticked role names would otherwise be absorbed into the last
+    # class listed.
+    bounds = [m.start() for m in re.finditer(r"^#{2,3} ", text, re.M)]
+    heads = list(re.finditer(r"^### `([a-z]+-class)`", text, re.M))
+    for m in heads:
+        end = next((b for b in bounds if b > m.start()), len(text))
+        for name in re.findall(r"`([a-z0-9-]+)`", text[m.end() : end]):
+            if not name.endswith("-class"):
+                out[name] = m.group(1)
+    return out
+
+
+def model_class_failures(repo: Path = REPO) -> list[str]:
+    if not (repo / _MODEL_CLASS_DOC).is_file():
+        return []
+    source: dict[str, str] = {}
+    for rel in _MODEL_CLASS_SOURCES:
+        source.update(_class_rows(repo, rel))
+    index = _class_index(repo)
+    real = {d.name for d in skill_dirs()}
+    where = " / ".join(_MODEL_CLASS_SOURCES)
+    out = []
+    for name, cls in sorted(index.items()):
+        if name not in real:
+            out.append(f"{_MODEL_CLASS_DOC}: indexes '{name}', not a skill in the tree")
+        elif name in source and source[name] != cls:
+            out.append(
+                f"{_MODEL_CLASS_DOC}: '{name}' indexed {cls} but {where} says {source[name]}"
+            )
+        elif name not in source:
+            out.append(
+                f"{_MODEL_CLASS_DOC}: '{name}' indexed {cls} with no class in {where} "
+                "— classify it there first"
+            )
+    for name, cls in sorted(source.items()):
+        if name in real and name not in index:
+            out.append(
+                f"{_MODEL_CLASS_DOC}: '{name}' is {cls} in the usage tables but not indexed"
+            )
+    return out
+
+
 CHECKS = [
     ("unresolved conflict markers", conflict_marker_failures),
     ("generated skills reference (docs/skills.md matches the tree)", skills_reference_failures),
@@ -1077,6 +1159,7 @@ CHECKS = [
     ("CLI invocation syntax (grouped `<group> <op>`, not dot-separated)", cli_syntax_failures),
     ("CLI reference drift (docs/cli-reference.md vs GROUPS registry)", cli_reference_failures),
     ("CLI operation names (grouped invocations name a real op)", cli_op_failures),
+    ("model-class index (docs/model-classes.md vs the usage tables)", model_class_failures),
 ]
 
 

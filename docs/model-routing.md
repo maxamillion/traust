@@ -16,6 +16,9 @@ python3 -m traust.cli registry models resolve <role>            # at the role fl
 python3 -m traust.cli registry models resolve <role> --tier opus-class   # escalated
 ```
 
+What each class is *for*, the eleven role floors, and the per-skill index:
+[model-classes.md](model-classes.md).
+
 Alignment rule **A12** (pre-commit) fails any skill or script that hardcodes a
 model ID outside the registry. This is the lock-in firewall: changing vendors
 or tiers is a reviewed data change, never a prose hunt.

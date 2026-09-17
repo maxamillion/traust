@@ -44,6 +44,10 @@ role** in `config/model-registry.yaml` — the resolution-time-enforced minimum
 When in doubt, run audits on the strongest model available and dashboards on
 whatever is cheap.
 
+Which class each *skill* runs at, why the floors sit where they do, and which
+roles may write a validity verdict into the ledger:
+[model-classes.md](model-classes.md).
+
 ## CLI tools, by capability
 
 Nothing beyond the baseline is needed until you use a skill that calls for it.

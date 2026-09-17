@@ -2,6 +2,27 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.7]
+
+- **New `docs/model-classes.md`**, linked from `requirements.md` and
+  `model-routing.md`: what each of the four tier classes is for, the eleven
+  role floors, which roles may write a validity verdict into the ledger, the
+  escalation triggers, and a per-skill class index.
+
+  Two things it clears up, because both were causing the question "where is
+  this documented" to have no good answer. The per-skill classes live in *two*
+  tables — `campaign-workflow.md` (21 pipeline skills) and
+  `standalone-usage.md` (27 standalone skills) — which are complementary, not
+  duplicates, so neither reads as authoritative. And skill frontmatter's
+  `harness.tier` (`primary`/`secondary`/`tertiary`/`ci`) is a *different axis*
+  entirely, which makes it look like the answer when it is not.
+
+- **New docs-consistency check, `model-class index`.** The index is derived
+  from the two usage tables and nothing links a skill to a class
+  mechanically, so the check fails on a misclassed skill, a name that is not a
+  skill, an indexed skill with no class in either table, or a classed skill
+  missing from the index. Mutation-tested both ways.
+
 ## [0.2.6]
 
 - Pin traust-contracts v0.5.0, traust-engine v0.2.5 and traust-ledger v0.3.0.
