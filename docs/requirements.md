@@ -48,6 +48,12 @@ Which class each *skill* runs at, why the floors sit where they do, and which
 roles may write a validity verdict into the ledger:
 [model-classes.md](model-classes.md).
 
+**These are defaults, not requirements.** Every model identifier lives in
+`model-registry.yaml`, and the copy in your `$TRAUST_CONFIG_HOME` wins — so a
+deployment can repoint any role to its own provider and models, per role,
+without touching the harness. See
+[Configuring your own models](model-classes.md#configuring-your-own-models).
+
 ## CLI tools, by capability
 
 Nothing beyond the baseline is needed until you use a skill that calls for it.

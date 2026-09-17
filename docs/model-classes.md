@@ -96,6 +96,95 @@ that applied, so a report says which class actually produced it.
 
 ---
 
+## Configuring your own models
+
+`model-registry.yaml` is a **shipped default that is also seeded**:
+`install_traust` copies it into `$TRAUST_CONFIG_HOME`, and **the copy there
+wins**. An adopter edits that copy and never touches the harness tree. Nothing
+about the classes above is hardcoded — they are that file's content.
+
+```bash
+$EDITOR "$TRAUST_CONFIG_HOME/model-registry.yaml"
+python3 -m traust.cli registry models validate        # schema + semantic checks
+python3 -m traust.cli registry models resolve deep-audit
+```
+
+### The override is per role, not all-or-nothing
+
+Repointing one role leaves the rest on their shipped defaults, so a deployment
+can move the work it cares about without re-declaring eleven roles:
+
+Add your provider, then **edit the `approved` list of the role(s) you want to
+move** — do not replace the role block, which would drop keys the schema
+requires (`candidates` and `ledger_validity_writer` are mandatory on every
+role):
+
+```yaml
+providers:
+  adopter-inc:
+    data_handling: zero-retention under our own MSA
+    models:
+      adopter-local-model-x:
+        tier: mythos-class
+        batch_eligible: false
+
+roles:
+  patch-author:
+    floor: mythos-class            # keep
+    approved: [adopter-local-model-x]   # <- the line you change
+    candidates: []                 # keep
+    ledger_validity_writer: false  # keep
+```
+
+With that in place, `resolve patch-author` returns `adopter-local-model-x`
+while `resolve deep-audit` still returns the shipped default.
+
+### It is schema-gated, so a broken override fails loudly
+
+The registry validates against `model-registry.schema.json` in
+traust-contracts before anything resolves. A malformed entry is rejected with
+the offending object printed — it does not silently fall back to the shipped
+copy or resolve to nothing. The shape the schema requires:
+
+| Level | Required keys |
+|---|---|
+| `providers.<name>` | `data_handling`, `models` |
+| `providers.<name>.models.<model-id>` | `tier`, `batch_eligible` (optional: `price_per_mtok_in`, `price_per_mtok_out`) |
+| `roles.<role>` | `floor`, `approved`, `candidates`, `ledger_validity_writer` (optional: `claude_code_only`, `note`, `evals`; no other keys) |
+
+Beyond the schema, `registry models validate` cross-checks that every model's
+`tier` is a declared class and that each role's `approved` list actually
+satisfies its `floor` — so you cannot quietly approve a sub-floor model for a
+role that writes ledger validity.
+
+### No vendor is assumed
+
+Provider and model names are opaque strings. A provider called `adopter-inc`
+with a model called `adopter-local-model-x` resolves exactly like the shipped
+Anthropic entries, because skills name *roles* and only the registry names
+models (rule **A12**). Swapping vendors is a config edit, not a code change.
+
+Prices are optional; supply `price_per_mtok_in` / `price_per_mtok_out` if you
+want `registry models spend` to compute cost for your own models rather than
+recording tokens alone.
+
+### Keeping track of your divergence
+
+`install_traust --doctor` reports when your config-home copy differs from the
+shipped one:
+
+```
+model-registry.yaml differs from the shipped copy — intentional override, or stale?
+```
+
+That is the intended state for an adopter who has repointed roles — the
+warning exists because the check cannot tell a deliberate override from a
+copy that has fallen behind an upstream change. `install_traust --force`
+refreshes it from the shipped default, discarding local edits, so re-apply
+your overrides after a force refresh.
+
+---
+
 ## Per-skill index
 
 **This index is hand-maintained, and that is a known weakness.** Nothing in the

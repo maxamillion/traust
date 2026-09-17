@@ -3,7 +3,9 @@
 How the harness decides *which model does what*. Policy home:
 [config/model-registry.yaml](../config/model-registry.yaml), schema-gated by
 `model-registry.schema.json` in traust-contracts. A deployment may place
-its own copy in `TRAUST_CONFIG_HOME`, which then takes precedence.
+its own copy in `TRAUST_CONFIG_HOME`, which then takes precedence — the
+procedure, the per-role granularity and the schema requirements are in
+[model-classes.md](model-classes.md#configuring-your-own-models).
 
 ## The one rule
 

@@ -8,7 +8,7 @@ The harness reads two kinds of configuration and keeps them apart on purpose.
 |---|---|
 | `external-tools.yaml` | Pinned versions of the open-source scanner binaries the harness runs. Optional per-deployment engines are deliberately **absent** — the file's own header lists them and says where each is watched instead |
 | `feeds.yaml` | Public vulnerability-feed endpoints (OSV, NVD, vendor CSAF/VEX) and their fetch policy |
-| `model-registry.yaml` | Model tier classes and routing roles; no estate data |
+| `model-registry.yaml` | Model tier classes and routing roles; no estate data. Adopters repoint roles to their own providers/models by editing the copy in `TRAUST_CONFIG_HOME` — per role, schema-gated ([procedure](../docs/model-classes.md#configuring-your-own-models)) |
 
 All three are *shipped defaults that are also seeded*: `install_traust` copies
 them into `TRAUST_CONFIG_HOME` (`SHIPPED_COPY`), so a deployment is complete in

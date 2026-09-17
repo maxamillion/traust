@@ -2,6 +2,27 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.8]
+
+- **Documents how an adopter configures their own models**, which was the one
+  question `model-classes.md` could not answer. `model-registry.yaml` is a
+  seeded shipped default and the copy in `$TRAUST_CONFIG_HOME` wins, but that
+  was a single clause in `model-routing.md` and said nothing about how.
+
+  New "Configuring your own models" section covers the per-role granularity
+  (repoint one role, the rest keep their defaults), the exact schema
+  requirements at provider/model/role level, that no vendor is assumed, that
+  `validate` refuses a sub-floor approval, and what
+  `install_traust --doctor`/`--force` do to a deliberate override. Linked from
+  `model-routing.md`, `requirements.md` (which now says outright that the
+  classes are defaults, not requirements) and `config/README.md`.
+
+  Every claim was executed against a scratch config home, which caught the
+  worked example being wrong: replacing a role block drops `candidates` and
+  `ledger_validity_writer`, both schema-required, so the YAML an adopter
+  would have copied failed validation. The example now changes only the
+  `approved` line.
+
 ## [0.2.7]
 
 - **New `docs/model-classes.md`**, linked from `requirements.md` and
