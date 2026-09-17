@@ -2,6 +2,19 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.6]
+
+- Pin traust-contracts v0.5.0, traust-engine v0.2.5 and traust-ledger v0.3.0.
+  Brings in the `evidence` projection column (so typed patch evidence is
+  queryable in SQL, not just present in the payload), the fixed
+  `traust_storage` PostgreSQL namespace, and the ledger's stamp/whoami REST
+  verbs.
+
+  Smoke-tested against the pinned copy rather than assumed: the
+  proof-requires-both-observations rule still holds, the verification family
+  still carries `evidence`, and both projection tables now report an
+  `evidence` column from the pinned DDL.
+
 ## [0.2.5]
 
 - Point every sibling pin at the new `traust-security` GitHub organisation:
