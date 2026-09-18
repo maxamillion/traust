@@ -1061,8 +1061,7 @@ def cli_op_failures(repo: Path = REPO) -> list[str]:
 # docs/model-classes.md indexes which tier class each skill runs at. Nothing in
 # the tree links a skill to a class mechanically (skill frontmatter carries
 # `harness.tier`, a different axis), so the index is derived from the two usage
-# tables. This check is what keeps it honest: the first draft of that page was
-# hand-written and misclassed nine skills while inventing six names.
+# tables. This check is what keeps the two in agreement.
 _MODEL_CLASS_DOC = "docs/model-classes.md"
 _MODEL_CLASS_SOURCES = ("docs/campaign-workflow.md", "docs/standalone-usage.md")
 
@@ -1198,6 +1197,38 @@ def graph_consumer_failures(repo: Path = REPO) -> list[str]:
     return out
 
 
+
+# --- docs/ is adopter-facing: no estate markers ---------------------------
+#
+# Everything under docs/ ships to adopters, so it must read as product
+# documentation rather than as one deployment's notes. config_hygiene_failures
+# already applies the deployment vocabulary to config/; this applies the same
+# block/review rules to docs/, which was previously unchecked. Estate-specific
+# FIGURES (graph sizes, corpus counts) cannot be pattern-matched and remain a
+# review concern — state them as "deployment-specific" instead.
+def docs_estate_marker_failures(repo: Path = REPO) -> list[str]:
+    docs = repo / "docs"
+    if not docs.is_dir():
+        return []
+    patterns = _estate_patterns()
+    if patterns is None:
+        return []
+    failures = []
+    for f in sorted(docs.rglob("*.md")):
+        try:
+            text = f.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        for rid, rx in patterns:
+            if rx.search(text):
+                rel = f.relative_to(repo)
+                failures.append(
+                    f"{rel}: deployment vocabulary rule {rid} matched — docs/ is "
+                    "adopter-facing and must stay estate-neutral"
+                )
+    return failures
+
+
 CHECKS = [
     ("unresolved conflict markers", conflict_marker_failures),
     ("generated skills reference (docs/skills.md matches the tree)", skills_reference_failures),
@@ -1222,6 +1253,7 @@ CHECKS = [
     ("CLI operation names (grouped invocations name a real op)", cli_op_failures),
     ("model-class index (docs/model-classes.md vs the usage tables)", model_class_failures),
     ("graph consumer lists (docs/graphs.md vs what opens each graph)", graph_consumer_failures),
+    ("docs/ estate neutrality (adopter-facing, no deployment vocabulary)", docs_estate_marker_failures),
 ]
 
 

@@ -5,6 +5,10 @@ were read from the skills and from the code that opens each graph, not
 recalled. Every consumer named here was found by searching for the artifact
 filename, and a docs-gate check keeps that list honest.
 
+Graph sizes and node counts are deployment-specific and deliberately absent:
+they depend entirely on your inventory. `repo-graph-stats.md` reports yours
+after a build.
+
 There are two graphs. They answer different questions, and the most common
 mistake is reaching for the wrong one:
 
@@ -15,7 +19,6 @@ mistake is reaching for the wrong one:
 | **Artifact** | `analysis-results/graph/repo-graph.{json,dot,gexf,html}` + `repo-graph-stats.md` | `analysis-results/graph/portfolio-graph.db` (SQLite: `nodes`, `edges`) |
 | **Built from** | the inputs inventory (segment CSVs + `owners.csv`) cross-referenced against `analysis-results/findings/` | the repo-graph spine, then the repos' own manifests and source |
 | **Built by** | `harnessing/repo-graph/scripts/build_repo_graph.py` | `python3 -m traust.cli portfolio` |
-| **Scale, last build** | ~10k nodes | 3.1 GB; 2.5M symbols, 84k source-packages, 23k packages, 4.9k modules, 3.5k repos |
 
 The spine is shared: **`repo-graph.json` is the L0 layer `/portfolio-graph`
 builds on.** So repo-graph is a prerequisite, not an alternative — a stale

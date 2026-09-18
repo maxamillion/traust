@@ -2,6 +2,24 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.10]
+
+- **`docs/` is adopter-facing; estate specifics removed.** `docs/graphs.md`
+  carried one deployment's graph sizes and node counts, and
+  `docs/model-classes.md` carried development history. Neither is product
+  documentation. Sizes are now stated as deployment-specific with a pointer to
+  `repo-graph-stats.md`, which reports the reader's own.
+
+- **New docs-consistency check, `docs/ estate neutrality`.** The deployment
+  vocabulary was applied to `config/` but never to `docs/`, which is how those
+  specifics passed every gate. The same block/review rules now run over
+  `docs/**/*.md`. All 32 existing docs pass unchanged; mutation-tested by
+  injecting a vocabulary match.
+
+  Note the limit: estate-specific *figures* — graph sizes, corpus counts —
+  match no pattern and stay a review concern. Write them as
+  deployment-specific rather than quoting one deployment's numbers.
+
 ## [0.2.9]
 
 - **New `docs/graphs.md`** — how `/repo-graph` and `/portfolio-graph` are
@@ -17,7 +35,7 @@ All notable changes to Traust are documented here.
   reads as good news.
 
 - **`/portfolio-graph` gains the `## Integrations` section it was missing.**
-  `/repo-graph` had one; the skill holding the 3.1 GB code-level graph
+  `/repo-graph` had one; the skill holding the code-level graph
   documented neither its consumers nor what depends on it being fresh.
 
 - **New docs-consistency check, `graph consumer lists`.** The consumer lists

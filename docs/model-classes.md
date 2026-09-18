@@ -202,10 +202,9 @@ own:
 - [campaign-workflow.md](campaign-workflow.md) — 21 skills, the pipeline lanes
 - [standalone-usage.md](standalone-usage.md) — 27 skills, invocable on any checkout
 
-Between them they cover 48 of 52 skills. The lists below are extracted from
-those two tables rather than written by hand — the first draft of this page was
-hand-written and got nine classes wrong and invented six skill names, which is
-the same drift the tables themselves are prone to. The four skills with no
+Between them they cover 48 of the 52 skills. The lists below are extracted
+from those two tables rather than maintained separately, so they cannot
+disagree with them; a docs-gate check enforces that. The four skills with no
 documented class are listed at the end with the role that governs them.
 
 ### `mythos-class` — 17 skill(s)
