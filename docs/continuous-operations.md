@@ -235,10 +235,11 @@ repo is designated `internal-tooling`:
 | `private-internal` | internal tools that never reach open source or customers |
 
 **The tiering applies universally across the entire audited corpus.** Corpus
-ownership / business-unit tags (`owned`, `external-bu`, `upstream`) are
-metrics-accounting labels only — they decide which dashboard counts a finding,
-and play **no role** in exposure class, routing, ceilings, or drain order. Never
-use them as a risk signal.
+ownership / business-unit tags (the `ownership` enum — see
+[report-structure.md](report-structure.md)) are metrics-accounting labels only
+— they decide which dashboard counts a finding, and play **no role** in
+exposure class, routing, ceilings, or drain order. Never use them as a risk
+signal.
 
 A private repo that forks/tracks a public upstream counts as *public* on the
 visibility axis (the upstream is attacker-readable and its vulnerabilities
