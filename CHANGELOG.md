@@ -2,6 +2,22 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.13]
+
+- **The reachability graphs now say what they are for**, not just what they
+  are. Their purpose is deciding whether an advisory reaches *your* code: a
+  manifest pin proves a vulnerable package is present, not that anything calls
+  the vulnerable function. `/impact-analysis` uses the answer as its strongest
+  evidence tier, and `/secure-rpm-audit` uses it too.
+
+  Documents the asymmetry that makes the tier trustworthy: a resolved
+  first-party call promotes to evidence `symbol` and classification
+  `affected`, package-level calls promote `manifest` → `symbol-usage`, and an
+  absent call path **never demotes anything** — DI, reflection and
+  MethodHandles hide edges from static analysis, so `no_call_sites_found` is
+  recorded honestly. Also why the tier is gated on cheaper tiers (a CPG is
+  expensive) and that an absent Joern records `skipped`, never a fake pass.
+
 ## [0.2.12]
 
 - **`findings.db` removed from the graph list.** It is a relational projection

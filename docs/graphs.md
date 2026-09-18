@@ -13,8 +13,8 @@ and `portfolio-graph-summary.json` report yours after a build.
 | **portfolio-graph** | `portfolio-graph.db` (SQLite) + `portfolio-graph-summary.json` | what the code depends on, and what a change reaches | [`/portfolio-graph`](../harnessing/portfolio-graph/SKILL.md) |
 | **ATT&CK coverage layer** | `attack-navigator-layer.json` (Navigator format 4.5) | which adversary techniques the portfolio's findings and validated chains cover | [`/attack-coverage`](../harnessing/attack-coverage/SKILL.md) |
 | **attack chains** | `attack_chains[]` inside validation reports | how a confirmed finding chains from entry point to terminal asset | [`/validate-findings`](../harnessing/5-validate/validate-findings/SKILL.md) |
-| **Joern Code Property Graph** | transient (built in a temp dir, discarded with the run) | is the vulnerable symbol reachable, via AST + control flow + data flow | `adapters joern` (Java, C/C++) |
-| **govulncheck call graph** | transient, internal to the tool | is the vulnerable symbol reachable in this Go module | `adapters govulncheck` |
+| **Joern Code Property Graph** | transient (temp dir, discarded with the run) | does an advisory's vulnerable symbol actually get called in this repo — the evidence that promotes a finding to `affected` | `adapters joern` (Java, C/C++) |
+| **govulncheck call graph** | transient, internal to the tool | the same question for Go, and the most precise reachability tier the harness has | `adapters govulncheck` |
 
 Graph artifacts land in `analysis-results/graph/` under the configured
 `analysis-results` root — except the call graphs, which are per-run and never
@@ -116,26 +116,61 @@ as "observed".
 
 ## Transient reachability graphs
 
-Two adapters build a graph to answer "is this vulnerable symbol actually
-reachable", and neither keeps it.
+**What they are for:** deciding whether an advisory actually reaches *your*
+code. A manifest pin says a vulnerable package is present; it does not say
+anything calls the vulnerable function. These graphs answer that, and the
+answer promotes or withholds an `affected` classification.
 
-**`adapters joern`** (Java, C/C++) builds a **Code Property Graph** — Joern's
-model, combining AST, control flow and data flow into one queryable graph —
-via `joern-parse` with the frontend named explicitly per language
-(`javasrc2cpg` or `c2cpg`; `jimple2cpg` when compiled artifacts are present).
-Reachability is then a CPGQL query over that graph, e.g. filtering
-`cpg.call` by `methodFullName` against the advisory's vulnerable symbols.
+**Used by** [`/impact-analysis`](../harnessing/3-audit/impact-analysis/SKILL.md)
+as its strongest evidence tier, and by
+[`/secure-rpm-audit`](../harnessing/3-audit/secure-rpm-audit/SKILL.md).
 
-The CPG is built inside a temporary directory and deleted when the run ends.
-What survives is a per-candidate classification, not the graph.
+### `adapters joern` — Code Property Graph (Java, C/C++)
 
-**`adapters govulncheck`** (Go) does the equivalent with the Go toolchain's own
-call-graph analysis, reporting `symbol_reachable` and related classifications
-and keeping nothing.
+Builds a CPG of the repo's first-party sources — Joern's model, combining AST,
+control flow and data flow in one queryable graph — with the frontend named
+explicitly per language (`javasrc2cpg` for Java source, `c2cpg` for C/C++,
+`jimple2cpg` when compiled artifacts are present). Reachability is then a
+CPGQL query: filter `cpg.call` by `methodFullName` against the advisory's
+vulnerable symbols or package prefixes.
 
-So both are the richest graphs the harness touches and the only ones you
-cannot query after the fact. If you need to re-examine reachability, re-run
-the adapter — there is no stored artifact.
+Each resolved call site is reported with file, caller method, approximate line
+and a `test_path` tag. The caller method is the authoritative anchor — line
+attribution drifts in `javasrc2cpg`, so exact lines are verified by reading
+the file.
+
+**The evidence rule is asymmetric, deliberately:**
+
+- a resolved first-party call to the vulnerable symbol promotes evidence to
+  `symbol` and classification to `affected`, with the witness cited
+- package-level calls promote `manifest` → `symbol-usage`
+- **an absent call path never demotes anything.** Java DI (Spring/CDI),
+  reflection and MethodHandles hide edges from static analysis, so
+  `no_call_sites_found` is recorded honestly and the classification stays
+  where the cheaper tiers put it
+
+It is gated on the cheap tiers — it runs only when a manifest pins the module
+in range or textual usage was found — because building a CPG is expensive. If
+Joern is absent the tier records `skipped: joern not on PATH` and is forgone,
+never faked.
+
+### `adapters govulncheck` — call graph (Go)
+
+The same question for Go, using the Go toolchain's own call-graph analysis,
+reporting `symbol_reachable` and related classifications. This is the
+strongest reachability tier in the harness because the Go analysis is precise;
+the Joern tier is its analogue for Java and C/C++.
+
+### Neither is persisted
+
+`joern.py` builds the CPG inside a temporary directory and discards it when
+the run ends; govulncheck keeps its graph internal. What survives is a
+per-candidate classification with its witness, recorded in the impact-analysis
+artifact.
+
+So these are the richest graphs the harness touches and the only ones you
+cannot query after the fact. To re-examine reachability, re-run the adapter —
+there is no stored graph to open.
 
 ---
 
