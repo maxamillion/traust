@@ -2,6 +2,23 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.12]
+
+- **`findings.db` removed from the graph list.** It is a relational projection
+  of the findings corpus, not a graph — the page even said so while listing
+  it. It appears now under an explicit "Not a graph" heading, because its
+  location in `analysis-results/graph/` invites the assumption. One table
+  inside it, `graph_edges`, is imported from repo-graph so findings can be
+  joined to what ships them; a borrowed edge table does not make the database
+  a graph.
+
+- **Joern is described as what it is: a Code Property Graph.** AST, control
+  flow and data flow in one queryable graph, built by `joern-parse` with the
+  frontend named per language and queried with CPGQL. Calling it a "call
+  graph" undersold it. Still transient — built in a temp dir and discarded
+  with the run — so it and the govulncheck call graph are the richest graphs
+  the harness touches and the only ones that cannot be queried afterwards.
+
 ## [0.2.11]
 
 - **`docs/graphs.md` now covers every graph the harness builds or reads**, not

@@ -1,8 +1,8 @@
 # Graphs — every graph the harness builds or reads
 
-Six graph-shaped artifacts, built by different skills for different questions.
-Reaching for the wrong one is the usual mistake, so each entry below states the
-question it answers and who consumes it.
+Six graphs, built by different skills for different questions. Reaching for
+the wrong one is the usual mistake, so each entry below states the question it
+answers and who consumes it.
 
 Sizes and node counts depend entirely on your inventory. `repo-graph-stats.md`
 and `portfolio-graph-summary.json` report yours after a build.
@@ -11,10 +11,10 @@ and `portfolio-graph-summary.json` report yours after a build.
 |---|---|---|---|
 | **repo-graph** | `repo-graph.{json,dot,gexf,html}` + `repo-graph-stats.md` | which repos exist, who owns them, what has been audited | [`/repo-graph`](../harnessing/repo-graph/SKILL.md) |
 | **portfolio-graph** | `portfolio-graph.db` (SQLite) + `portfolio-graph-summary.json` | what the code depends on, and what a change reaches | [`/portfolio-graph`](../harnessing/portfolio-graph/SKILL.md) |
-| **findings projection** | `findings.db` (SQLite) | ad-hoc queries over the findings corpus | [`/findings-db`](../harnessing/findings-db/SKILL.md) |
 | **ATT&CK coverage layer** | `attack-navigator-layer.json` (Navigator format 4.5) | which adversary techniques the portfolio's findings and validated chains cover | [`/attack-coverage`](../harnessing/attack-coverage/SKILL.md) |
 | **attack chains** | `attack_chains[]` inside validation reports | how a confirmed finding chains from entry point to terminal asset | [`/validate-findings`](../harnessing/5-validate/validate-findings/SKILL.md) |
-| **reachability call graphs** | transient, per-run adapter output | is the vulnerable symbol actually reachable in this module | `adapters govulncheck` / `adapters joern` |
+| **Joern Code Property Graph** | transient (built in a temp dir, discarded with the run) | is the vulnerable symbol reachable, via AST + control flow + data flow | `adapters joern` (Java, C/C++) |
+| **govulncheck call graph** | transient, internal to the tool | is the vulnerable symbol reachable in this Go module | `adapters govulncheck` |
 
 Graph artifacts land in `analysis-results/graph/` under the configured
 `analysis-results` root — except the call graphs, which are per-run and never
@@ -84,16 +84,17 @@ set), `/fleet-fix` (every repo affected by one systemic pattern),
 exposure), `/drift-watch` (staleness), plus `cli/build_rescan_worklist`
 (rescan routing) and `ops/build_crown_jewel_tiers` (tiering).
 
-## findings.db — the findings projection
+## Not a graph: `findings.db`
 
-A SQLite projection of the findings corpus, so a leadership question becomes a
-query rather than a walk over thousands of JSON files. Not a graph in the
-node/edge sense, but it sits beside the others in `analysis-results/graph/`
-and is what to reach for when the question is about findings rather than about
-repos or code.
+`findings.db` sits in the same directory and is **not** a graph — it is a
+relational projection of the findings corpus (`findings`, `events`,
+`decisions`, `validations`, `repos`, `impact`, `provenance`, plus views),
+queried via [`/findings-db`](../harnessing/findings-db/SKILL.md).
 
-A projection, never an authority: the disposition ledgers remain the source of
-truth.
+It is called out here only because its location invites the assumption. One
+table inside it, `graph_edges`, *is* imported from repo-graph so findings can
+be joined to what ships them — but a single borrowed edge table does not make
+the database a graph, and nothing treats it as one.
 
 ## attack-navigator-layer.json — ATT&CK coverage
 
@@ -113,15 +114,28 @@ Not a standalone file. Each validation report carries `attack_chains[]` with
 from an entry point to an asset, and it is the input the ATT&CK layer scores
 as "observed".
 
-## Reachability call graphs — transient
+## Transient reachability graphs
 
-`adapters govulncheck` (Go) and `adapters joern` (Java/C) build call graphs to
-decide whether a vulnerable symbol is reachable, then emit candidates rather
-than the graph. Nothing is persisted: the graph exists for the run, and what
-survives is a reachability classification on each candidate.
+Two adapters build a graph to answer "is this vulnerable symbol actually
+reachable", and neither keeps it.
 
-These are analysis steps, not artifacts — there is nothing to refresh or query
-later.
+**`adapters joern`** (Java, C/C++) builds a **Code Property Graph** — Joern's
+model, combining AST, control flow and data flow into one queryable graph —
+via `joern-parse` with the frontend named explicitly per language
+(`javasrc2cpg` or `c2cpg`; `jimple2cpg` when compiled artifacts are present).
+Reachability is then a CPGQL query over that graph, e.g. filtering
+`cpg.call` by `methodFullName` against the advisory's vulnerable symbols.
+
+The CPG is built inside a temporary directory and deleted when the run ends.
+What survives is a per-candidate classification, not the graph.
+
+**`adapters govulncheck`** (Go) does the equivalent with the Go toolchain's own
+call-graph analysis, reporting `symbol_reachable` and related classifications
+and keeping nothing.
+
+So both are the richest graphs the harness touches and the only ones you
+cannot query after the fact. If you need to re-examine reachability, re-run
+the adapter — there is no stored artifact.
 
 ---
 
