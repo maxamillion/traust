@@ -3,7 +3,7 @@
 ## Setup
 
 ```bash
-git clone https://github.com/openshift/traust.git && cd traust
+git clone https://github.com/traust-security/traust.git && cd traust
 make sync      # install dependencies (uv)
 make hooks     # enable the repository's git hooks for this clone
 make install   # create TRAUST_CONFIG_HOME from the shipped templates
