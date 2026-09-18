@@ -55,7 +55,7 @@ re-query rather than reconciling by hand.
 | `events` | disposition-ledger events (recorded/occurred timestamps, source, actor, disposition) |
 | `validations` | live-validation verdicts from `validations/**/*-validation.json`, joined to repos best-effort |
 | `graph_edges` | repo-graph edges (`ships`, `owned-by`, …) for product-reach joins |
-| `v_open` | open exposure (not resolved, not FP/refuted, **hardening excluded** per dashboard convention) with repo context columns |
+| `v_open` | open exposure (not affirmatively closed, not a false positive, **hardening excluded** per dashboard convention) with repo context columns |
 | `v_hardening` | the hardening/posture-debt class, separated like the dashboards |
 | `v_distinct_owned` | Lens-2-style distinct fingerprints over owned HEAD audits (approximation — census parity rules are stricter) |
 | `meta` | `built_at`, harness version, **the authority rule** |
