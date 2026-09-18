@@ -11,19 +11,19 @@
 # traust-engine repo and is owned by that repo's CODEOWNERS.
 
 # The gates
-/src/traust/cli/check_skill_alignment.py @openshift/traust-maintainers
-/src/traust/cli/check_skill_security.py @openshift/traust-maintainers
-/src/traust/cli/check_docs_consistency.py @openshift/traust-maintainers
-/src/traust/cli/check_content_licenses.py @openshift/traust-maintainers
-/src/traust/cli/check_drift.py @openshift/traust-maintainers
+/src/traust/cli/check_skill_alignment.py @traust-security/traust-admins
+/src/traust/cli/check_skill_security.py @traust-security/traust-admins
+/src/traust/cli/check_docs_consistency.py @traust-security/traust-admins
+/src/traust/cli/check_content_licenses.py @traust-security/traust-admins
+/src/traust/cli/check_drift.py @traust-security/traust-admins
 
 # The sandbox policy (the sandbox itself is traust-engine/src/traust_engine/_util/safe_exec.py)
-/config/safe-exec-profiles.example.yaml @openshift/traust-maintainers
+/config/safe-exec-profiles.example.yaml @traust-security/traust-admins
 
 # Ledger integrity / two-person rule
-/src/traust/cli/countersign.py @openshift/traust-maintainers
+/src/traust/cli/countersign.py @traust-security/traust-admins
 
 # The boundary itself
-/.githooks/ @openshift/traust-maintainers
-/.gitlab-ci.yml @openshift/traust-maintainers
-/CODEOWNERS @openshift/traust-maintainers
+/.githooks/ @traust-security/traust-admins
+/.gitlab-ci.yml @traust-security/traust-admins
+/CODEOWNERS @traust-security/traust-admins
