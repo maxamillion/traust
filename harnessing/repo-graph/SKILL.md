@@ -170,3 +170,6 @@ the graph's `ships` edges drive per-product reporting in the PQC and
 findings dashboards. `/drift-watch` flags the graph stale when
 `the inputs inventory` HEAD moves. The DOT/GEXF/HTML renders are
 human-terminal.
+
+Both graphs, their layers and the full consumer list:
+[docs/graphs.md](../../docs/graphs.md).

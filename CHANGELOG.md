@@ -2,6 +2,32 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.9]
+
+- **New `docs/graphs.md`** — how `/repo-graph` and `/portfolio-graph` are
+  actually used, which was documented nowhere. The two SKILL.md files were the
+  only substantive source; every mention across `docs/` was a one-line passing
+  reference with no section.
+
+  Covers what each graph holds and the question it answers, the L0–L4 layer
+  model, that `repo-graph.json` is `/portfolio-graph`'s L0 spine (so it is a
+  prerequisite, not an alternative), the full consumer list for each artifact,
+  and what a stale graph gets wrong — a stale repo-graph misstates coverage
+  and ownership, a stale portfolio-graph *understates* blast radius, which
+  reads as good news.
+
+- **`/portfolio-graph` gains the `## Integrations` section it was missing.**
+  `/repo-graph` had one; the skill holding the 3.1 GB code-level graph
+  documented neither its consumers nor what depends on it being fresh.
+
+- **New docs-consistency check, `graph consumer lists`.** The consumer lists
+  were built by searching for the artifact filenames, so they rot as soon as a
+  new consumer lands. The check fails when anything opens
+  `portfolio-graph.db` or `repo-graph.json` without being named in the doc.
+  Mutation-tested with a throwaway module, and it caught two real cases while
+  being written: itself (it holds the artifact names as data) and
+  `check_drift`, which is documented under its skill name `/drift-watch`.
+
 ## [0.2.8]
 
 - **Documents how an adopter configures their own models**, which was the one

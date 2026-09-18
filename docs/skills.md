@@ -502,6 +502,7 @@ Use when the user asks code-level portfolio questions or to build/refresh/query 
 - **Tier:** `secondary`
 - **Invoke:** `/portfolio-graph`
 - **Skill:** [harnessing/portfolio-graph/SKILL.md](../harnessing/portfolio-graph/SKILL.md)
+- **Produces / consumes:** [Integrations](../harnessing/portfolio-graph/SKILL.md#integrations)
 
 ## rbac-tenancy-rollup
 

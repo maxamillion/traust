@@ -1137,6 +1137,67 @@ def model_class_failures(repo: Path = REPO) -> list[str]:
     return out
 
 
+
+# --- graph consumer lists vs what actually opens each graph ----------------
+#
+# docs/graphs.md names every skill/script that reads each graph. That list was
+# built by searching for the artifact filename, so it goes stale the moment a
+# new consumer appears — which is exactly the drift that made "how are the
+# graphs used" unanswerable before the doc existed.
+_GRAPHS_DOC = "docs/graphs.md"
+_GRAPH_ARTIFACTS = ("portfolio-graph.db", "repo-graph.json")
+# This module names both artifacts as check data, and check_drift is
+# documented under its skill name rather than its module name.
+_GRAPH_CONSUMER_SKIP = {"check_docs_consistency"}
+_GRAPH_CONSUMER_ALIASES = {"check_drift": "drift-watch"}
+
+
+def _graph_consumers(repo: Path, artifact: str) -> set[str]:
+    """Skill dirs and src/ modules that reference `artifact`."""
+    found: set[str] = set()
+    for base, label in ((repo / "harnessing", "skill"), (repo / "src" / "traust", "src")):
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if path.suffix not in (".md", ".py") or not path.is_file():
+                continue
+            try:
+                if artifact not in path.read_text(encoding="utf-8", errors="ignore"):
+                    continue
+            except OSError:
+                continue
+            if label == "skill":
+                # the owning skill directory is the one holding SKILL.md
+                for parent in path.parents:
+                    if (parent / "SKILL.md").is_file():
+                        found.add(parent.name)
+                        break
+            else:
+                found.add(path.stem)
+    return found
+
+
+def graph_consumer_failures(repo: Path = REPO) -> list[str]:
+    doc = repo / _GRAPHS_DOC
+    if not doc.is_file():
+        return []
+    text = doc.read_text(encoding="utf-8")
+    out = []
+    for artifact in _GRAPH_ARTIFACTS:
+        actual = _graph_consumers(repo, artifact)
+        # the graph skills themselves are the producers, not consumers to list
+        actual -= {"portfolio-graph", "repo-graph"} | _GRAPH_CONSUMER_SKIP
+        missing = sorted(
+            n for n in actual if n not in text and _GRAPH_CONSUMER_ALIASES.get(n, n) not in text
+        )
+        if missing:
+            out.append(
+                f"{_GRAPHS_DOC}: {artifact} is read by {', '.join(missing)} "
+                "but they are not named in the doc"
+            )
+    return out
+
+
 CHECKS = [
     ("unresolved conflict markers", conflict_marker_failures),
     ("generated skills reference (docs/skills.md matches the tree)", skills_reference_failures),
@@ -1160,6 +1221,7 @@ CHECKS = [
     ("CLI reference drift (docs/cli-reference.md vs GROUPS registry)", cli_reference_failures),
     ("CLI operation names (grouped invocations name a real op)", cli_op_failures),
     ("model-class index (docs/model-classes.md vs the usage tables)", model_class_failures),
+    ("graph consumer lists (docs/graphs.md vs what opens each graph)", graph_consumer_failures),
 ]
 
 
