@@ -17,7 +17,38 @@
 #     ownership: owned
 #     business_unit: Your Business Unit
 
+#
+# Storage scope (optional — omit for a single-scope deployment):
+#
+#   `scope_id` is the authorization partition in traust-contracts
+#   storage/v1. PostgreSQL enforces it INSIDE the view, so a query that
+#   supplies no scope returns zero rows rather than an error. Dashboards
+#   must therefore resolve scopes from this file — never hardcode one.
+#
+#   mode: single         one scope for everything (the default)
+#         business_unit  one scope per business_unit declared below;
+#                        trees sharing a unit share a scope
+#         tree           one scope per tree
+#         explicit       each tree declares its own scope_id
+#
+#   Switching modes is a config edit plus a re-ingest; it is not a schema
+#   change. harness-qa trees are never listed as readable, matching how the
+#   corpus resolver excludes them.
+#
+#   scope:
+#     mode: business_unit
+#
+#   Under `explicit`, add scope_id to every tree:
+#     findings:
+#       label: your-bu
+#       ownership: owned
+#       business_unit: Your Business Unit
+#       scope_id: your-bu
+
 version: 1
+scope:
+  mode: single
+  id: local
 trees: {}
 engagements: {}
 overrides: {}
