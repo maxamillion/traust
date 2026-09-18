@@ -1,9 +1,8 @@
 # Model classes — what each level is for, and which skill runs at which
 
-**As of 2026-09-17.** Every class, role and floor below was read from
-[`config/model-registry.yaml`](../config/model-registry.yaml), which is the
-authority. This document explains that file and indexes the per-skill
-assignment; it never introduces a class or floor of its own.
+[`config/model-registry.yaml`](../config/model-registry.yaml) is the
+authority for every class, role and floor. This document explains that file
+and indexes the per-skill assignment; it introduces nothing of its own.
 
 Three questions get confused with each other, so they are answered separately:
 

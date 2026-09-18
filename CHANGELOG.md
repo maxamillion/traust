@@ -2,6 +2,22 @@
 
 All notable changes to Traust are documented here.
 
+## [0.2.11]
+
+- **`docs/graphs.md` now covers every graph the harness builds or reads**, not
+  two of them. Added: `findings.db` (the findings projection), the ATT&CK
+  Navigator coverage layer and how its observed/modeled/derived scores differ,
+  per-finding `attack_chains[]`, and the transient reachability call graphs
+  built by `adapters govulncheck` / `adapters joern` — which are analysis
+  steps with nothing persisted, worth saying so nobody looks for an artifact.
+
+  Retitled: calling both graphs "portfolio graphs" reproduced the exact
+  confusion the page exists to remove. One is `repo-graph`, one is
+  `portfolio-graph`.
+
+  Also dropped the doc's opening banner, which described how the page was
+  researched rather than telling a reader anything.
+
 ## [0.2.10]
 
 - **`docs/` is adopter-facing; estate specifics removed.** `docs/graphs.md`
