@@ -308,6 +308,13 @@ def add_finding_identity_args(ap) -> None:
         "MARKER only, never the hash, so no identity moves.",
     )
 
+    p5 = sub.add_parser(
+        "stamp-missing",
+        help="fingerprint findings that have none; never re-stamps",
+    )
+    p5.add_argument("root", type=Path)
+    p5.add_argument("--write", action="store_true")
+
     p2 = sub.add_parser(
         "backfill",
         help="annotate every *-security-audit.json under a tree",
@@ -341,6 +348,9 @@ def call_finding_identity(engine, args) -> int:
             args.audit, write=args.write,
             allow_identity_move=args.allow_identity_move,
         )
+
+    if args.identity_cmd == "stamp-missing":
+        return fi.run_stamp_missing(args.root, write=args.write)
 
     if args.identity_cmd == "attribute":
         return fi.run_attribute(args.root, write=args.write)
