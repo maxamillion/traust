@@ -1284,9 +1284,9 @@ requires-dist = [
     { name = "pyyaml" },
     { name = "referencing" },
     { name = "sigstore", marker = "extra == 'signing'", specifier = ">=4.0,<5.0" },
-    { name = "traust-contracts", git = "https://github.com/traust-security/traust-contracts.git?tag=v0.9.0" },
-    { name = "traust-engine", git = "https://github.com/traust-security/traust-engine.git?tag=v0.3.0" },
-    { name = "traust-ledger", git = "https://github.com/traust-security/traust-ledger.git?tag=v0.3.4" },
+    { name = "traust-contracts", git = "https://github.com/traust-security/traust-contracts.git?tag=v0.10.0" },
+    { name = "traust-engine", git = "https://github.com/traust-security/traust-engine.git?tag=v0.3.1" },
+    { name = "traust-ledger", git = "https://github.com/traust-security/traust-ledger.git?tag=v0.3.5" },
     { name = "tree-sitter", marker = "extra == 'graph'" },
     { name = "tree-sitter-go", marker = "extra == 'graph'" },
     { name = "tree-sitter-javascript", marker = "extra == 'graph'" },
@@ -1303,8 +1303,8 @@ dev = [
 
 [[package]]
 name = "traust-contracts"
-version = "0.9.0"
-source = { git = "https://github.com/traust-security/traust-contracts.git?tag=v0.9.0#5b943dcc625d9726388ca4683aed2db9cee6469a" }
+version = "0.10.0"
+source = { git = "https://github.com/traust-security/traust-contracts.git?tag=v0.10.0#4d0eb5f4c4cb1cae779bfa6d2fbee80bd2db816c" }
 dependencies = [
     { name = "jsonschema", extra = ["format-nongpl"] },
     { name = "pydantic" },
@@ -1313,8 +1313,8 @@ dependencies = [
 
 [[package]]
 name = "traust-engine"
-version = "0.3.0"
-source = { git = "https://github.com/traust-security/traust-engine.git?tag=v0.3.0#01ad82a53a5a08a574feb05a1ebd827d58b3cf3e" }
+version = "0.3.1"
+source = { git = "https://github.com/traust-security/traust-engine.git?tag=v0.3.1#47649f68233285f6d2aa2a720d2a694dab84806d" }
 dependencies = [
     { name = "jsonschema" },
     { name = "pyyaml" },
@@ -1325,8 +1325,8 @@ dependencies = [
 
 [[package]]
 name = "traust-ledger"
-version = "0.3.4"
-source = { git = "https://github.com/traust-security/traust-ledger.git?tag=v0.3.4#391233e8da8c8398e3304b014d757f3d89ec6bfb" }
+version = "0.3.5"
+source = { git = "https://github.com/traust-security/traust-ledger.git?tag=v0.3.5#0449ab769f10134f2a9d582aaf4efd3c04a12eae" }
 dependencies = [
     { name = "jsonschema" },
     { name = "pyjwt", extra = ["crypto"] },
