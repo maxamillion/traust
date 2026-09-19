@@ -290,6 +290,11 @@ def add_finding_identity_args(ap) -> None:
     p1 = sub.add_parser("fingerprint", help="print (or --write) fingerprints for one report")
     p1.add_argument("audit", type=Path)
     p1.add_argument("--write", action="store_true")
+    p1.add_argument(
+        "--allow-identity-move",
+        action="store_true",
+        help="permit re-stamping to CHANGE an existing fingerprint. Ledger events are keyed on these values, so a move orphans that history -- only with a plan for the orphaned events.",
+    )
 
     p2 = sub.add_parser(
         "backfill",
@@ -297,6 +302,11 @@ def add_finding_identity_args(ap) -> None:
     )
     p2.add_argument("root", type=Path)
     p2.add_argument("--dry-run", action="store_true")
+    p2.add_argument(
+        "--allow-identity-move",
+        action="store_true",
+        help="permit re-stamping to CHANGE an existing fingerprint. Ledger events are keyed on these values, so a move orphans that history -- only with a plan for the orphaned events.",
+    )
 
     p3 = sub.add_parser(
         "rebaseline",
@@ -315,10 +325,16 @@ def add_finding_identity_args(ap) -> None:
 
 def call_finding_identity(engine, args) -> int:
     if args.identity_cmd == "fingerprint":
-        return fi.run_fingerprint(args.audit, write=args.write)
+        return fi.run_fingerprint(
+            args.audit, write=args.write,
+            allow_identity_move=args.allow_identity_move,
+        )
 
     if args.identity_cmd == "backfill":
-        return fi.run_backfill(args.root, dry_run=args.dry_run)
+        return fi.run_backfill(
+            args.root, dry_run=args.dry_run,
+            allow_identity_move=args.allow_identity_move,
+        )
 
     ledger_svc = engine.ledger.service(data_dir=args.layer.parent)
     r = fi.rebaseline(
