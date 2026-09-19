@@ -296,6 +296,18 @@ def add_finding_identity_args(ap) -> None:
         help="permit re-stamping to CHANGE an existing fingerprint. Ledger events are keyed on these values, so a move orphans that history -- only with a plan for the orphaned events.",
     )
 
+    p4 = sub.add_parser(
+        "attribute",
+        help="attribute existing fingerprints to the recipe that minted them",
+    )
+    p4.add_argument("root", type=Path)
+    p4.add_argument(
+        "--write",
+        action="store_true",
+        help="stamp fingerprint_algo where attribution succeeded. Writes the "
+        "MARKER only, never the hash, so no identity moves.",
+    )
+
     p2 = sub.add_parser(
         "backfill",
         help="annotate every *-security-audit.json under a tree",
@@ -329,6 +341,9 @@ def call_finding_identity(engine, args) -> int:
             args.audit, write=args.write,
             allow_identity_move=args.allow_identity_move,
         )
+
+    if args.identity_cmd == "attribute":
+        return fi.run_attribute(args.root, write=args.write)
 
     if args.identity_cmd == "backfill":
         return fi.run_backfill(
